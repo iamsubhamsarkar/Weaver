@@ -1,0 +1,62 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: weaver-agent
+  profiles:
+    active: local
+  main:
+    banner-mode: off
+
+# Weaver Agent Configuration
+weaver:
+  cli:
+    enabled: true
+  max-agent-steps: 15
+  semantic-min-score: 0.92
+  cache-max-results: 1
+  workspace-root: ${user.dir}
+
+  # ChromaDB (semantic cache)
+  chroma:
+    url: http://localhost:8000
+    collection: weaver-experience
+
+  # AI Provider Configuration (add your API keys here or in configs/application-local.yml)
+  providers:
+    groq:
+      api-key: ${GROQ_API_KEY:}
+      model: llama-3.3-70b-versatile
+      enabled: true
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: gemini-2.0-flash
+      enabled: true
+    cerebras:
+      api-key: ${CEREBRAS_API_KEY:}
+      model: llama-3.3-70b
+      enabled: true
+    mistral:
+      api-key: ${MISTRAL_API_KEY:}
+      model: mistral-small-latest
+      enabled: true
+    openrouter:
+      api-key: ${OPENROUTER_API_KEY:}
+      model: meta-llama/llama-3.3-70b-instruct:free
+      enabled: true
+
+# Logging
+logging:
+  level:
+    com.weaver: INFO
+    dev.langchain4j: WARN
+  pattern:
+    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

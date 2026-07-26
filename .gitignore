@@ -1,0 +1,29 @@
+# Build
+target/
+build/
+*.class
+*.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# Environment & secrets
+*.env
+configs/application-local.yml
+ai-apis/*.properties
+
+# Data
+chromadb-data/
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maven wrapper
+!.mvn/wrapper/maven-wrapper.jar

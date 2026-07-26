@@ -1,0 +1,91 @@
+#!/bin/bash
+# ═══════════════════════════════════════════════════════════
+#  WEAVER - One-command launcher
+#  Just run: ./weaver
+# ═══════════════════════════════════════════════════════════
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+WEAVER_HOME="$HOME/.weaver"
+CREDENTIALS_FILE="$WEAVER_HOME/credentials.yml"
+JAR_FILE="$SCRIPT_DIR/target/weaver-agent-1.0.0-SNAPSHOT.jar"
+
+# Colors
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[1;36m'
+DIM='\033[2m'
+RESET='\033[0m'
+
+# ─── Step 1: Check Java ───────────────────────────────────
+check_java() {
+    if ! command -v java &> /dev/null; then
+        echo -e "${RED}Java not found!${RESET}"
+        echo ""
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            echo "  Install with: sudo apt install openjdk-21-jdk"
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+            echo "  Install with: brew install openjdk@21"
+        fi
+        exit 1
+    fi
+}
+
+# ─── Step 2: Build if needed ──────────────────────────────
+build_if_needed() {
+    if [ ! -f "$JAR_FILE" ]; then
+        echo -e "${CYAN}Building Weaver (first time only)...${RESET}"
+        
+        if command -v mvn &> /dev/null; then
+            cd "$SCRIPT_DIR" && mvn package -DskipTests -q 2>&1 | tail -3
+        elif [ -f "$SCRIPT_DIR/mvnw" ]; then
+            cd "$SCRIPT_DIR" && ./mvnw package -DskipTests -q 2>&1 | tail -3
+        else
+            echo -e "${RED}Maven not found!${RESET}"
+            if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+                echo "  Install with: sudo apt install maven"
+            elif [[ "$OSTYPE" == "darwin"* ]]; then
+                echo "  Install with: brew install maven"
+            fi
+            exit 1
+        fi
+
+        if [ ! -f "$JAR_FILE" ]; then
+            echo -e "${RED}Build failed. Run 'mvn package' manually to see errors.${RESET}"
+            exit 1
+        fi
+        echo -e "${GREEN}✓ Build complete${RESET}"
+    fi
+}
+
+# ─── Step 3: Start ChromaDB if Docker available ───────────
+start_chromadb() {
+    if command -v docker &> /dev/null; then
+        if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q "weaver-chroma"; then
+            # Only start if docker daemon is running
+            if docker info &> /dev/null; then
+                docker start weaver-chroma 2>/dev/null || \
+                docker run -d --name weaver-chroma --restart unless-stopped \
+                    -p 8000:8000 chromadb/chroma:latest &> /dev/null
+                echo -e "${DIM}  ChromaDB: started (semantic cache active)${RESET}"
+            fi
+        fi
+    fi
+}
+
+# ─── Step 4: Launch ───────────────────────────────────────
+launch() {
+    cd "$SCRIPT_DIR"
+    exec java -jar "$JAR_FILE" --spring.profiles.active=local "$@"
+}
+
+# ═══════════════════════════════════════════════════════════
+#  Main
+# ═══════════════════════════════════════════════════════════
+
+check_java
+build_if_needed
+start_chromadb
+launch "$@"
