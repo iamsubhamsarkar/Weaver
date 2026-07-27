@@ -114,9 +114,17 @@ public class WeaverAgent {
             return cached.get();
         }
 
-        // 2. Build conversation
+        // 2. Auto pre-search: search web for best practices before coding
+        String preSearchContext = performPreSearch(userPrompt);
+
+        // 3. Build conversation
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(new SystemMessage(buildSystemPrompt()));
+
+        // Inject pre-search results as context if available
+        if (preSearchContext != null) {
+            messages.add(new SystemMessage("REFERENCE (from web search - use as guidance):\n" + preSearchContext));
+        }
 
         // Add existing memory
         List<ChatMessage> history = memoryStore.getMessages(sessionId);
@@ -125,13 +133,16 @@ public class WeaverAgent {
         }
         messages.add(new UserMessage(userPrompt));
 
-        // 3. ReAct Loop
-        String currentProvider = providerRegistry.getPrimaryProviderName();
-        ChatLanguageModel model = providerRegistry.getPrimaryModel();
+        // 4. ReAct Loop with per-request failed set
+        Set<String> failedThisRequest = new HashSet<>();
+        ProviderRegistry.ProviderEntry currentProviderEntry = providerRegistry.getPrimaryProvider();
 
-        if (model == null) {
-            return "ERROR: No AI providers configured. Add API keys to configs/application-local.yml";
+        if (currentProviderEntry == null) {
+            return "ERROR: No AI providers configured. Add API keys via /configure";
         }
+
+        ChatLanguageModel model = currentProviderEntry.model();
+        String currentProvider = currentProviderEntry.name();
 
         String finalResponse = null;
         int steps = 0;
@@ -174,10 +185,9 @@ public class WeaverAgent {
 
                 finalResponse = aiMessage.text();
 
-                // Stream the response for real-time UX if callback is set
+                // Stream the response for real-time UX
                 if (streamTokenCallback != null && finalResponse != null && !finalResponse.isEmpty()) {
-                    // Stream word-by-word for natural appearance
-                    String[] words = finalResponse.split("(?<=\\s)"); // split keeping whitespace
+                    String[] words = finalResponse.split("(?<=\\s)");
                     for (String word : words) {
                         streamTokenCallback.accept(word);
                         try { Thread.sleep(15); } catch (InterruptedException ignored) {}
@@ -190,26 +200,37 @@ public class WeaverAgent {
 
             } catch (Exception e) {
                 onThinkingStop.run();
-                log.warn("Provider {} failed: {}", currentProvider, e.getMessage());
-                providerRegistry.recordFailure(currentProvider);
-                outputCallback.accept(String.format("  ⚠️ %s rate-limited, switching provider...", currentProvider));
 
-                // Wait before retry (parse delay from error or use default 10s)
-                long delayMs = parseRetryDelay(e.getMessage());
-                if (delayMs > 0 && delayMs <= 60000) {
-                    try { Thread.sleep(Math.min(delayMs, 15000)); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                // Classify the error
+                ProviderRegistry.ErrorType errorType = providerRegistry.classifyError(currentProvider, e);
+
+                // Add to per-request failed set (never retry this provider in this request)
+                failedThisRequest.add(currentProvider);
+
+                switch (errorType) {
+                    case RATE_LIMITED:
+                        outputCallback.accept(String.format("  ⚠️ %s rate-limited, switching provider...", currentProvider));
+                        break;
+                    case CAPABILITY_FAILURE:
+                        outputCallback.accept(String.format("  ⚠️ %s doesn't support tool calling, disabled permanently.", currentProvider));
+                        break;
+                    case NETWORK_ERROR:
+                        outputCallback.accept(String.format("  ⚠️ %s network error, switching provider...", currentProvider));
+                        break;
+                    default:
+                        outputCallback.accept(String.format("  ⚠️ %s failed, switching provider...", currentProvider));
                 }
 
-                // Get next provider (properly tracked by name)
-                var nextProvider = providerRegistry.getNextProvider(currentProvider);
+                // Get next available provider (respects failed set + rate limits)
+                ProviderRegistry.ProviderEntry nextProvider = providerRegistry.getAvailableProvider(failedThisRequest);
                 if (nextProvider == null) {
-                    finalResponse = "ERROR: All AI providers are rate-limited. Please wait a minute and try again.";
+                    finalResponse = "ERROR: All AI providers are unavailable. Please wait a minute and try again.";
                     break;
                 }
                 model = nextProvider.model();
                 currentProvider = nextProvider.name();
 
-                // Compress context before handing to new model (save tokens)
+                // Compress context before handing to new model
                 messages = ContextCompressor.compress(messages);
             }
         }
@@ -227,6 +248,55 @@ public class WeaverAgent {
         }
 
         return finalResponse;
+    }
+
+    /**
+     * Auto pre-search: before the agent loop, search the web for relevant best practices.
+     * Only for code generation tasks (not for file reading, shell commands, etc.)
+     */
+    private String performPreSearch(String userPrompt) {
+        // Only pre-search for tasks that involve creating/writing code
+        String lower = userPrompt.toLowerCase();
+        boolean isCodeTask = lower.contains("create") || lower.contains("build") || lower.contains("write")
+                || lower.contains("implement") || lower.contains("make") || lower.contains("generate")
+                || lower.contains("add") || lower.contains("develop");
+
+        // Skip pre-search for simple tasks (reading, listing, explaining)
+        boolean isSimpleTask = lower.contains("read") || lower.contains("list") || lower.contains("show")
+                || lower.contains("explain") || lower.contains("what is") || lower.contains("delete")
+                || lower.contains("run") || lower.contains("execute");
+
+        if (!isCodeTask || isSimpleTask) {
+            return null;
+        }
+
+        try {
+            // Extract key terms for search (first 100 chars, cleaned up)
+            String searchQuery = userPrompt.length() > 100
+                    ? userPrompt.substring(0, 100) + " best practices example"
+                    : userPrompt + " best practices example";
+
+            outputCallback.accept("  🌐 Pre-searching for best practices...");
+
+            // Use the WebSearchTool directly
+            ToolMethod webSearch = toolMethods.get("webSearch");
+            if (webSearch != null) {
+                Object result = webSearch.method().invoke(webSearch.instance(), searchQuery);
+                String searchResult = result != null ? result.toString() : null;
+
+                if (searchResult != null && !searchResult.startsWith("ERROR") && !searchResult.startsWith("No results")) {
+                    // Truncate to save tokens — only keep first 500 chars of search results
+                    if (searchResult.length() > 500) {
+                        searchResult = searchResult.substring(0, 500) + "...";
+                    }
+                    outputCallback.accept("  ← Found references");
+                    return searchResult;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Pre-search failed (non-critical): {}", e.getMessage());
+        }
+        return null;
     }
 
     private String executeTool(ToolExecutionRequest toolCall) {

@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,6 +21,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ProviderRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(ProviderRegistry.class);
+
+    // Minimum delay between calls to the same provider (prevents RPM limit)
+    private static final long MIN_CALL_INTERVAL_MS = 2500;
 
     @Value("${weaver.providers.groq.api-key:}")
     private String groqApiKey;
@@ -57,15 +61,21 @@ public class ProviderRegistry {
     private boolean openrouterEnabled;
 
     private final List<ProviderEntry> providers = new ArrayList<>();
-    private final Map<String, AtomicInteger> failureCounts = new ConcurrentHashMap<>();
     private final Map<String, StreamingChatLanguageModel> streamingModels = new HashMap<>();
 
-    public record ProviderEntry(String name, ChatLanguageModel model, int priority, long contextWindow) {}
+    // Per-provider tracking
+    private final Map<String, Instant> lastCallTime = new ConcurrentHashMap<>();
+    private final Map<String, AtomicInteger> callsThisMinute = new ConcurrentHashMap<>();
+    private final Map<String, Instant> minuteWindowStart = new ConcurrentHashMap<>();
+    private final Set<String> permanentlyDisabled = ConcurrentHashMap.newKeySet();
+
+    // Round-robin index
+    private int roundRobinIndex = 0;
+
+    public record ProviderEntry(String name, ChatLanguageModel model, int priority, long contextWindow, int rpmLimit) {}
 
     @PostConstruct
     public void init() {
-        // Priority: Groq (1) -> Gemini (2) -> Cerebras (3) -> Mistral (4) -> OpenRouter (5)
-
         if (groqEnabled && !groqApiKey.isBlank()) {
             providers.add(new ProviderEntry("groq",
                 OpenAiChatModel.builder()
@@ -74,8 +84,9 @@ public class ProviderRegistry {
                     .modelName(groqModel)
                     .maxTokens(4096)
                     .timeout(Duration.ofSeconds(60))
+                    .maxRetries(1)
                     .build(),
-                1, 131072));
+                1, 131072, 30));
             streamingModels.put("groq", OpenAiStreamingChatModel.builder()
                     .baseUrl("https://api.groq.com/openai/v1")
                     .apiKey(groqApiKey)
@@ -83,7 +94,7 @@ public class ProviderRegistry {
                     .maxTokens(4096)
                     .timeout(Duration.ofSeconds(60))
                     .build());
-            log.info("✓ Groq provider registered (model: {})", groqModel);
+            log.info("✓ Groq registered (model: {}, RPM: 30)", groqModel);
         }
 
         if (geminiEnabled && !geminiApiKey.isBlank()) {
@@ -92,10 +103,11 @@ public class ProviderRegistry {
                     .apiKey(geminiApiKey)
                     .modelName(geminiModel)
                     .maxOutputTokens(8192)
+                    .maxRetries(1)
                     .timeout(Duration.ofSeconds(90))
                     .build(),
-                2, 1048576));
-            log.info("✓ Gemini provider registered (model: {})", geminiModel);
+                2, 1048576, 15));
+            log.info("✓ Gemini registered (model: {}, RPM: 15)", geminiModel);
         }
 
         if (cerebrasEnabled && !cerebrasApiKey.isBlank()) {
@@ -105,9 +117,10 @@ public class ProviderRegistry {
                     .apiKey(cerebrasApiKey)
                     .modelName(cerebrasModel)
                     .maxTokens(4096)
+                    .maxRetries(1)
                     .timeout(Duration.ofSeconds(60))
                     .build(),
-                3, 131072));
+                3, 131072, 30));
             streamingModels.put("cerebras", OpenAiStreamingChatModel.builder()
                     .baseUrl("https://api.cerebras.ai/v1")
                     .apiKey(cerebrasApiKey)
@@ -115,7 +128,7 @@ public class ProviderRegistry {
                     .maxTokens(4096)
                     .timeout(Duration.ofSeconds(60))
                     .build());
-            log.info("✓ Cerebras provider registered (model: {})", cerebrasModel);
+            log.info("✓ Cerebras registered (model: {})", cerebrasModel);
         }
 
         if (mistralEnabled && !mistralApiKey.isBlank()) {
@@ -125,9 +138,10 @@ public class ProviderRegistry {
                     .apiKey(mistralApiKey)
                     .modelName(mistralModel)
                     .maxTokens(4096)
+                    .maxRetries(1)
                     .timeout(Duration.ofSeconds(60))
                     .build(),
-                4, 32768));
+                4, 32768, 30));
             streamingModels.put("mistral", OpenAiStreamingChatModel.builder()
                     .baseUrl("https://api.mistral.ai/v1")
                     .apiKey(mistralApiKey)
@@ -135,7 +149,7 @@ public class ProviderRegistry {
                     .maxTokens(4096)
                     .timeout(Duration.ofSeconds(60))
                     .build());
-            log.info("✓ Mistral provider registered (model: {})", mistralModel);
+            log.info("✓ Mistral registered (model: {})", mistralModel);
         }
 
         if (openrouterEnabled && !openrouterApiKey.isBlank()) {
@@ -145,9 +159,10 @@ public class ProviderRegistry {
                     .apiKey(openrouterApiKey)
                     .modelName(openrouterModel)
                     .maxTokens(4096)
+                    .maxRetries(1)
                     .timeout(Duration.ofSeconds(60))
                     .build(),
-                5, 131072));
+                5, 131072, 20));
             streamingModels.put("openrouter", OpenAiStreamingChatModel.builder()
                     .baseUrl("https://openrouter.ai/api/v1")
                     .apiKey(openrouterApiKey)
@@ -155,80 +170,132 @@ public class ProviderRegistry {
                     .maxTokens(4096)
                     .timeout(Duration.ofSeconds(60))
                     .build());
-            log.info("✓ OpenRouter provider registered (model: {})", openrouterModel);
+            log.info("✓ OpenRouter registered (model: {})", openrouterModel);
         }
 
-        providers.sort(Comparator.comparingInt(ProviderEntry::priority));
-
         if (providers.isEmpty()) {
-            log.error("⚠ No AI providers configured! Add API keys to application.yml or ai-apis/*.properties");
+            log.error("⚠ No AI providers configured!");
         } else {
             log.info("Registered {} AI providers", providers.size());
         }
     }
 
+    /**
+     * Get the best available provider using round-robin with rate-limit awareness.
+     * Skips providers in the failedThisRequest set and permanently disabled ones.
+     * Enforces minimum delay between calls to the same provider.
+     */
+    public ProviderEntry getAvailableProvider(Set<String> failedThisRequest) {
+        int attempts = providers.size();
+
+        for (int i = 0; i < attempts; i++) {
+            roundRobinIndex = (roundRobinIndex + 1) % providers.size();
+            ProviderEntry candidate = providers.get(roundRobinIndex);
+            String name = candidate.name();
+
+            // Skip if failed in this request already
+            if (failedThisRequest.contains(name)) continue;
+
+            // Skip if permanently disabled (capability failure)
+            if (permanentlyDisabled.contains(name)) continue;
+
+            // Skip if approaching RPM limit (proactive switch at 80%)
+            if (isApproachingRateLimit(name, candidate.rpmLimit())) {
+                log.info("Proactively skipping {} (approaching RPM limit)", name);
+                continue;
+            }
+
+            // Enforce minimum delay between calls to same provider
+            enforceCallDelay(name);
+
+            // Track this call
+            recordCall(name);
+
+            return candidate;
+        }
+
+        // All providers are either failed or rate-limited — wait and retry
+        log.info("All providers busy. Waiting 30s for rate limits to reset...");
+        try { Thread.sleep(30000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+
+        // Reset RPM counters and try first available
+        callsThisMinute.clear();
+        minuteWindowStart.clear();
+
+        for (ProviderEntry entry : providers) {
+            if (!failedThisRequest.contains(entry.name()) && !permanentlyDisabled.contains(entry.name())) {
+                recordCall(entry.name());
+                return entry;
+            }
+        }
+
+        return null; // Truly no providers available
+    }
+
+    /**
+     * Get the primary (first) provider for initial call.
+     */
+    public ProviderEntry getPrimaryProvider() {
+        for (ProviderEntry entry : providers) {
+            if (!permanentlyDisabled.contains(entry.name())) {
+                enforceCallDelay(entry.name());
+                recordCall(entry.name());
+                return entry;
+            }
+        }
+        return providers.isEmpty() ? null : providers.get(0);
+    }
+
     public ChatLanguageModel getPrimaryModel() {
-        return providers.isEmpty() ? null : providers.get(0).model();
+        ProviderEntry entry = getPrimaryProvider();
+        return entry != null ? entry.model() : null;
     }
 
     public String getPrimaryProviderName() {
         return providers.isEmpty() ? "none" : providers.get(0).name();
     }
 
-    public ChatLanguageModel getNextModel(String failedProvider) {
-        failureCounts.computeIfAbsent(failedProvider, k -> new AtomicInteger(0)).incrementAndGet();
-
-        // Find the next provider that hasn't been rate-limited recently
-        for (ProviderEntry entry : providers) {
-            if (!entry.name().equals(failedProvider)) {
-                int failures = failureCounts.getOrDefault(entry.name(), new AtomicInteger(0)).get();
-                if (failures < 3) {
-                    log.info("Falling back from {} to {}", failedProvider, entry.name());
-                    return entry.model();
-                }
-            }
-        }
-
-        // ALL providers have failed — wait and reset
-        log.info("All providers rate-limited. Waiting 30s before retry...");
-        try {
-            Thread.sleep(30000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-        failureCounts.clear();
-        return providers.isEmpty() ? null : providers.get(0).model();
-    }
-
     /**
-     * Get the next model along with its actual provider name (for proper tracking).
+     * Classify an error and decide if this provider should be permanently disabled.
      */
-    public ProviderEntry getNextProvider(String failedProvider) {
-        failureCounts.computeIfAbsent(failedProvider, k -> new AtomicInteger(0)).incrementAndGet();
+    public ErrorType classifyError(String providerName, Exception e) {
+        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
 
-        for (ProviderEntry entry : providers) {
-            if (!entry.name().equals(failedProvider)) {
-                int failures = failureCounts.getOrDefault(entry.name(), new AtomicInteger(0)).get();
-                if (failures < 3) {
-                    log.info("Falling back from {} to {}", failedProvider, entry.name());
-                    return entry;
-                }
-            }
+        // Rate limit errors (temporary — try again later)
+        if (msg.contains("429") || msg.contains("rate_limit") || msg.contains("rate limit")
+                || msg.contains("quota") || msg.contains("resource_exhausted")
+                || msg.contains("too many requests")) {
+            return ErrorType.RATE_LIMITED;
         }
 
-        // ALL providers exhausted — wait for rate limits to reset
-        log.info("All providers rate-limited. Waiting 30s...");
-        try {
-            Thread.sleep(30000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        // Model capability failures (permanent — this provider can't handle tool calling)
+        if (msg.contains("tool") && (msg.contains("not supported") || msg.contains("invalid"))
+                || msg.contains("function calling is not supported")
+                || msg.contains("unrecognized request argument: tools")) {
+            log.warn("Provider {} permanently disabled: doesn't support tool calling", providerName);
+            permanentlyDisabled.add(providerName);
+            return ErrorType.CAPABILITY_FAILURE;
         }
-        failureCounts.clear();
-        return providers.isEmpty() ? null : providers.get(0);
+
+        // Timeout or network issues (temporary)
+        if (msg.contains("timeout") || msg.contains("timed out") || msg.contains("connection")) {
+            return ErrorType.NETWORK_ERROR;
+        }
+
+        // Unknown error — treat as temporary
+        return ErrorType.UNKNOWN;
     }
 
-    public List<ProviderEntry> getAllProviders() {
-        return Collections.unmodifiableList(providers);
+    public enum ErrorType {
+        RATE_LIMITED,       // 429 — try another provider, come back later
+        CAPABILITY_FAILURE, // Model can't do tool calling — permanently skip
+        NETWORK_ERROR,      // Timeout — retry after delay
+        UNKNOWN             // Treat as temporary
+    }
+
+    public void recordSuccess(String providerName) {
+        // Success resets nothing — just confirms provider works
+        log.debug("Provider {} succeeded", providerName);
     }
 
     public StreamingChatLanguageModel getStreamingModel(String providerName) {
@@ -240,11 +307,57 @@ public class ProviderRegistry {
         return streamingModels.get(providers.get(0).name());
     }
 
-    public void recordSuccess(String providerName) {
-        failureCounts.computeIfAbsent(providerName, k -> new AtomicInteger(0)).set(0);
+    public List<ProviderEntry> getAllProviders() {
+        return Collections.unmodifiableList(providers);
     }
 
-    public void recordFailure(String providerName) {
-        failureCounts.computeIfAbsent(providerName, k -> new AtomicInteger(0)).incrementAndGet();
+    public Set<String> getPermanentlyDisabled() {
+        return Collections.unmodifiableSet(permanentlyDisabled);
+    }
+
+    // ─── Internal rate limiting ──────────────────────────────
+
+    private boolean isApproachingRateLimit(String name, int rpmLimit) {
+        AtomicInteger calls = callsThisMinute.get(name);
+        Instant windowStart = minuteWindowStart.get(name);
+
+        if (calls == null || windowStart == null) return false;
+
+        // Reset if window expired
+        if (Instant.now().isAfter(windowStart.plusSeconds(60))) {
+            calls.set(0);
+            minuteWindowStart.put(name, Instant.now());
+            return false;
+        }
+
+        // Proactive switch at 80% of RPM limit
+        return calls.get() >= (int) (rpmLimit * 0.8);
+    }
+
+    private void enforceCallDelay(String name) {
+        Instant last = lastCallTime.get(name);
+        if (last != null) {
+            long elapsed = Instant.now().toEpochMilli() - last.toEpochMilli();
+            if (elapsed < MIN_CALL_INTERVAL_MS) {
+                long sleepTime = MIN_CALL_INTERVAL_MS - elapsed;
+                try { Thread.sleep(sleepTime); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            }
+        }
+    }
+
+    private void recordCall(String name) {
+        lastCallTime.put(name, Instant.now());
+
+        callsThisMinute.computeIfAbsent(name, k -> new AtomicInteger(0));
+        minuteWindowStart.computeIfAbsent(name, k -> Instant.now());
+
+        // Reset if window expired
+        Instant windowStart = minuteWindowStart.get(name);
+        if (Instant.now().isAfter(windowStart.plusSeconds(60))) {
+            callsThisMinute.get(name).set(0);
+            minuteWindowStart.put(name, Instant.now());
+        }
+
+        callsThisMinute.get(name).incrementAndGet();
     }
 }
