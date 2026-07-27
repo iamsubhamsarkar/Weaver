@@ -177,18 +177,54 @@ public class ProviderRegistry {
 
     public ChatLanguageModel getNextModel(String failedProvider) {
         failureCounts.computeIfAbsent(failedProvider, k -> new AtomicInteger(0)).incrementAndGet();
+
+        // Find the next provider that hasn't been rate-limited recently
         for (ProviderEntry entry : providers) {
             if (!entry.name().equals(failedProvider)) {
                 int failures = failureCounts.getOrDefault(entry.name(), new AtomicInteger(0)).get();
-                if (failures < 5) {
+                if (failures < 3) {
                     log.info("Falling back from {} to {}", failedProvider, entry.name());
                     return entry.model();
                 }
             }
         }
-        // Reset failures and try first available
+
+        // ALL providers have failed — wait and reset
+        log.info("All providers rate-limited. Waiting 30s before retry...");
+        try {
+            Thread.sleep(30000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         failureCounts.clear();
         return providers.isEmpty() ? null : providers.get(0).model();
+    }
+
+    /**
+     * Get the next model along with its actual provider name (for proper tracking).
+     */
+    public ProviderEntry getNextProvider(String failedProvider) {
+        failureCounts.computeIfAbsent(failedProvider, k -> new AtomicInteger(0)).incrementAndGet();
+
+        for (ProviderEntry entry : providers) {
+            if (!entry.name().equals(failedProvider)) {
+                int failures = failureCounts.getOrDefault(entry.name(), new AtomicInteger(0)).get();
+                if (failures < 3) {
+                    log.info("Falling back from {} to {}", failedProvider, entry.name());
+                    return entry;
+                }
+            }
+        }
+
+        // ALL providers exhausted — wait for rate limits to reset
+        log.info("All providers rate-limited. Waiting 30s...");
+        try {
+            Thread.sleep(30000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        failureCounts.clear();
+        return providers.isEmpty() ? null : providers.get(0);
     }
 
     public List<ProviderEntry> getAllProviders() {

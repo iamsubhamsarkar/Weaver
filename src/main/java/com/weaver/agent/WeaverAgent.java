@@ -192,14 +192,22 @@ public class WeaverAgent {
                 onThinkingStop.run();
                 log.warn("Provider {} failed: {}", currentProvider, e.getMessage());
                 providerRegistry.recordFailure(currentProvider);
-                outputCallback.accept(String.format("  ⚠️ %s failed, trying fallback...", currentProvider));
+                outputCallback.accept(String.format("  ⚠️ %s rate-limited, switching provider...", currentProvider));
 
-                model = providerRegistry.getNextModel(currentProvider);
-                if (model == null) {
-                    finalResponse = "ERROR: All AI providers failed. Last error: " + e.getMessage();
+                // Wait before retry (parse delay from error or use default 10s)
+                long delayMs = parseRetryDelay(e.getMessage());
+                if (delayMs > 0 && delayMs <= 60000) {
+                    try { Thread.sleep(Math.min(delayMs, 15000)); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
+
+                // Get next provider (properly tracked by name)
+                var nextProvider = providerRegistry.getNextProvider(currentProvider);
+                if (nextProvider == null) {
+                    finalResponse = "ERROR: All AI providers are rate-limited. Please wait a minute and try again.";
                     break;
                 }
-                currentProvider = "fallback";
+                model = nextProvider.model();
+                currentProvider = nextProvider.name();
             }
         }
 
@@ -327,5 +335,29 @@ public class WeaverAgent {
         if (text == null) return "";
         text = text.replace("\n", " ").trim();
         return text.length() > maxLen ? text.substring(0, maxLen) + "..." : text;
+    }
+
+    /**
+     * Parse "retry in X.XXs" or "retryDelay: Xs" from error messages to determine wait time.
+     */
+    private long parseRetryDelay(String errorMessage) {
+        if (errorMessage == null) return 10000; // default 10s
+        try {
+            // Match "try again in X.Xs" or "try again in Xms"
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("try again in ([\\d.]+)(s|ms)")
+                    .matcher(errorMessage);
+            if (m.find()) {
+                double value = Double.parseDouble(m.group(1));
+                String unit = m.group(2);
+                return (long) (unit.equals("ms") ? value : value * 1000);
+            }
+            // Match "retryDelay": "Xs"
+            m = java.util.regex.Pattern.compile("retryDelay.*?(\\d+)s").matcher(errorMessage);
+            if (m.find()) {
+                return Long.parseLong(m.group(1)) * 1000;
+            }
+        } catch (Exception ignored) {}
+        return 10000; // default 10s
     }
 }

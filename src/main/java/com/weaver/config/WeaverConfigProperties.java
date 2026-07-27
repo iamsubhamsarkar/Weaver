@@ -16,7 +16,7 @@ public class WeaverConfigProperties {
         ".html", ".css", ".json", ".yml", ".yaml", ".xml", ".md", ".txt",
         ".sh", ".bash", ".sql", ".toml", ".gradle", ".kt", ".swift"
     );
-    private String workspaceRoot = System.getProperty("user.dir");
+    private String workspaceRoot = System.getProperty("weaver.workspace", System.getProperty("user.dir"));
 
     public double getSemanticMinScore() { return semanticMinScore; }
     public void setSemanticMinScore(double semanticMinScore) { this.semanticMinScore = semanticMinScore; }

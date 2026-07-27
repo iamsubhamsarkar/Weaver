@@ -51,5 +51,6 @@ if %errorlevel% equ 0 (
 )
 
 REM ─── Step 4: Launch ───────────────────────────────────────
+set USER_PWD=%CD%
 cd /d "%SCRIPT_DIR%"
-java -jar "%JAR_FILE%" --spring.profiles.active=local %*
+java -Dweaver.workspace="%USER_PWD%" -jar "%JAR_FILE%" --spring.profiles.active=local %*

@@ -8,6 +8,7 @@ spring:
     active: local
   main:
     banner-mode: off
+    log-startup-info: false
 
 # Weaver Agent Configuration
 weaver:
@@ -46,13 +47,11 @@ weaver:
       model: meta-llama/llama-3.3-70b-instruct:free
       enabled: true
 
-# Logging
+# Logging - all logs go to ~/.weaver/logs/weaver.log (see logback-spring.xml)
+# Terminal stays clean for CLI UX
 logging:
   level:
-    com.weaver: INFO
-    dev.langchain4j: WARN
-  pattern:
-    console: "%d{HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    root: INFO
 
 # Actuator
 management:

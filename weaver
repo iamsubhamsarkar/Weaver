@@ -93,13 +93,18 @@ start_chromadb() {
 
 # ─── Step 4: Launch ───────────────────────────────────────
 launch() {
-    cd "$SCRIPT_DIR"
-    exec java -jar "$JAR_FILE" --spring.profiles.active=local "$@"
+    # Pass the user's actual working directory (where they typed 'weaver')
+    # to the JVM so the agent operates on the correct project
+    USER_PWD="${WEAVER_USER_PWD:-$(pwd)}"
+    exec java -Dweaver.workspace="$USER_PWD" -jar "$JAR_FILE" --spring.profiles.active=local "$@"
 }
 
 # ═══════════════════════════════════════════════════════════
 #  Main
 # ═══════════════════════════════════════════════════════════
+
+# Capture the user's working directory BEFORE we cd anywhere
+export WEAVER_USER_PWD="$(pwd)"
 
 check_java
 build_if_needed

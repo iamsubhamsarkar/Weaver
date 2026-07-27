@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!--
+      Weaver Logging Configuration:
+      - ALL internal logs go to file ONLY (~/.weaver/logs/weaver.log)
+      - Console shows NOTHING (clean UX - the CLI handles its own output)
+    -->
+
+    <!-- Determine log directory -->
+    <property name="LOG_DIR" value="${user.home}/.weaver/logs"/>
+
+    <!-- File appender - all logs go here -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/weaver.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/weaver-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>50MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- NO console appender - keeps terminal clean for CLI UX -->
+
+    <!-- Suppress noisy libraries completely -->
+    <logger name="dev.langchain4j" level="WARN"/>
+    <logger name="dev.ai4j" level="WARN"/>
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.apache" level="WARN"/>
+    <logger name="io.github.resilience4j" level="WARN"/>
+
+    <!-- Weaver internal logs go to file at INFO level -->
+    <logger name="com.weaver" level="INFO"/>
+
+    <!-- Root: everything to file only -->
+    <root level="INFO">
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>
