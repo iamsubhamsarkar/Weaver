@@ -1,5 +1,6 @@
 package com.weaver.cli;
 
+import com.weaver.config.OsDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -25,8 +26,10 @@ public class SetupWizard {
     private static final Path EXPIRY_FILE = WEAVER_HOME.resolve("api-expiry.yml");
 
     private final Map<String, ProviderInfo> providers = new LinkedHashMap<>();
+    private final OsDetector osDetector;
 
-    public SetupWizard() {
+    public SetupWizard(OsDetector osDetector) {
+        this.osDetector = osDetector;
         providers.put("groq", new ProviderInfo("Groq", "https://console.groq.com", "GROQ_API_KEY", "gsk_"));
         providers.put("gemini", new ProviderInfo("Google Gemini", "https://aistudio.google.com/apikey", "GEMINI_API_KEY", "AI"));
         providers.put("cerebras", new ProviderInfo("Cerebras", "https://cloud.cerebras.ai", "CEREBRAS_API_KEY", "csk-"));
@@ -62,7 +65,24 @@ public class SetupWizard {
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
               🧙 WEAVER FIRST-TIME SETUP
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            \033[0m
+            \033[0m""");
+
+        // Show detected OS and shell
+        System.out.printf("  \033[1mDetected OS:\033[0m %s%n", osDetector.getOsName());
+        System.out.printf("  \033[1mShell:\033[0m       %s %s%n", osDetector.getShellCommand(), osDetector.getShellFlag());
+        System.out.print("  \033[2mOverride shell? [Enter to keep, or type custom shell]: \033[0m");
+        System.out.flush();
+
+        String shellOverride = reader.readLine();
+        if (shellOverride != null && !shellOverride.trim().isEmpty()) {
+            osDetector.saveShellOverride(shellOverride.trim());
+            System.out.printf("  \033[32m✓ Shell set to: %s\033[0m%n", shellOverride.trim());
+        } else {
+            System.out.println("  \033[2m  Using default\033[0m");
+        }
+
+        System.out.println("""
+
               Weaver needs at least ONE free AI API key to work.
               All providers below are FREE (no credit card needed).
               Keys are stored locally at: ~/.weaver/credentials.yml

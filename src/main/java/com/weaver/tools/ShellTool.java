@@ -1,5 +1,6 @@
 package com.weaver.tools;
 
+import com.weaver.config.OsDetector;
 import dev.langchain4j.agent.tool.Tool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,8 +19,10 @@ public class ShellTool {
     private static final int TIMEOUT_SECONDS = 60;
     private static final int MAX_OUTPUT_CHARS = 10000;
 
-    // Patterns that indicate destructive/dangerous commands
-    private static final List<String> DESTRUCTIVE_PATTERNS = List.of(
+    private final OsDetector osDetector;
+
+    // Linux/macOS destructive patterns
+    private static final List<String> UNIX_DESTRUCTIVE_PATTERNS = List.of(
             "rm -rf", "rm -r /", "rmdir",
             "git reset --hard", "git push --force", "git push -f",
             "git clean -f", "git branch -D",
@@ -28,9 +31,28 @@ public class ShellTool {
             "> /dev/", "chmod 777",
             "kill -9", "killall",
             "shutdown", "reboot",
-            ":(){ :|:& };:",  // fork bomb
+            ":(){ :|:& };:",
             "mv / ", "rm /*"
     );
+
+    // Windows destructive patterns
+    private static final List<String> WINDOWS_DESTRUCTIVE_PATTERNS = List.of(
+            "rmdir /s", "rd /s",
+            "del /f", "del /s", "del /q *",
+            "format c:", "format d:",
+            "git reset --hard", "git push --force", "git push -f",
+            "git clean -f", "git branch -D",
+            "drop table", "drop database", "truncate table",
+            "shutdown /s", "shutdown /r",
+            "taskkill /f",
+            "reg delete",
+            "diskpart",
+            "bcdedit"
+    );
+
+    public ShellTool(OsDetector osDetector) {
+        this.osDetector = osDetector;
+    }
 
     @Tool("Execute a shell command and return its output. Parameters: command (the shell command to run), workingDirectory (optional, defaults to current directory).")
     public String runCommand(String command, String workingDirectory) {
@@ -49,7 +71,8 @@ public class ShellTool {
 
             log.info("Executing: {} (in {})", command, workDir);
 
-            ProcessBuilder pb = new ProcessBuilder("/bin/sh", "-c", command);
+            // Use OsDetector to build the correct ProcessBuilder for this OS
+            ProcessBuilder pb = osDetector.buildProcess(command);
             pb.directory(workDir.toFile());
             pb.redirectErrorStream(true);
 
@@ -93,7 +116,10 @@ public class ShellTool {
 
     private boolean isDestructive(String command) {
         String lower = command.toLowerCase().trim();
-        return DESTRUCTIVE_PATTERNS.stream().anyMatch(lower::contains);
+        List<String> patterns = osDetector.isWindows()
+                ? WINDOWS_DESTRUCTIVE_PATTERNS
+                : UNIX_DESTRUCTIVE_PATTERNS;
+        return patterns.stream().anyMatch(lower::contains);
     }
 
     /**
