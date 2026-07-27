@@ -52,6 +52,17 @@ public class WeaverCli implements CommandLineRunner {
         // Hook output callback
         agent.setOutputCallback(this::printColored);
 
+        // Hook thinking spinner
+        ThinkingSpinner spinner = new ThinkingSpinner();
+        agent.setOnThinkingStart(() -> spinner.start("Thinking"));
+        agent.setOnThinkingStop(spinner::stop);
+
+        // Hook streaming output (words appear as they're generated)
+        agent.setStreamTokenCallback(token -> {
+            System.out.print(token);
+            System.out.flush();
+        });
+
         // Print banner
         printBanner();
 
@@ -84,11 +95,11 @@ public class WeaverCli implements CommandLineRunner {
             // Execute the agent
             try {
                 long start = System.currentTimeMillis();
+                System.out.println("\n\033[1;32m━━━ Response ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m");
                 String response = agent.execute(input, sessionId);
                 long elapsed = System.currentTimeMillis() - start;
 
-                System.out.println("\n\033[1;32m━━━ Response ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m");
-                System.out.println(response);
+                // Response was already streamed word-by-word, just print timing
                 System.out.println("\033[2m(" + elapsed + "ms)\033[0m");
             } catch (Exception e) {
                 System.out.println("\n\033[1;31m❌ Error: " + e.getMessage() + "\033[0m");

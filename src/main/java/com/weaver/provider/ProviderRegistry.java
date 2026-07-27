@@ -1,8 +1,10 @@
 package com.weaver.provider;
 
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +58,7 @@ public class ProviderRegistry {
 
     private final List<ProviderEntry> providers = new ArrayList<>();
     private final Map<String, AtomicInteger> failureCounts = new ConcurrentHashMap<>();
+    private final Map<String, StreamingChatLanguageModel> streamingModels = new HashMap<>();
 
     public record ProviderEntry(String name, ChatLanguageModel model, int priority, long contextWindow) {}
 
@@ -73,6 +76,13 @@ public class ProviderRegistry {
                     .timeout(Duration.ofSeconds(60))
                     .build(),
                 1, 131072));
+            streamingModels.put("groq", OpenAiStreamingChatModel.builder()
+                    .baseUrl("https://api.groq.com/openai/v1")
+                    .apiKey(groqApiKey)
+                    .modelName(groqModel)
+                    .maxTokens(4096)
+                    .timeout(Duration.ofSeconds(60))
+                    .build());
             log.info("✓ Groq provider registered (model: {})", groqModel);
         }
 
@@ -98,6 +108,13 @@ public class ProviderRegistry {
                     .timeout(Duration.ofSeconds(60))
                     .build(),
                 3, 131072));
+            streamingModels.put("cerebras", OpenAiStreamingChatModel.builder()
+                    .baseUrl("https://api.cerebras.ai/v1")
+                    .apiKey(cerebrasApiKey)
+                    .modelName(cerebrasModel)
+                    .maxTokens(4096)
+                    .timeout(Duration.ofSeconds(60))
+                    .build());
             log.info("✓ Cerebras provider registered (model: {})", cerebrasModel);
         }
 
@@ -111,6 +128,13 @@ public class ProviderRegistry {
                     .timeout(Duration.ofSeconds(60))
                     .build(),
                 4, 32768));
+            streamingModels.put("mistral", OpenAiStreamingChatModel.builder()
+                    .baseUrl("https://api.mistral.ai/v1")
+                    .apiKey(mistralApiKey)
+                    .modelName(mistralModel)
+                    .maxTokens(4096)
+                    .timeout(Duration.ofSeconds(60))
+                    .build());
             log.info("✓ Mistral provider registered (model: {})", mistralModel);
         }
 
@@ -124,6 +148,13 @@ public class ProviderRegistry {
                     .timeout(Duration.ofSeconds(60))
                     .build(),
                 5, 131072));
+            streamingModels.put("openrouter", OpenAiStreamingChatModel.builder()
+                    .baseUrl("https://openrouter.ai/api/v1")
+                    .apiKey(openrouterApiKey)
+                    .modelName(openrouterModel)
+                    .maxTokens(4096)
+                    .timeout(Duration.ofSeconds(60))
+                    .build());
             log.info("✓ OpenRouter provider registered (model: {})", openrouterModel);
         }
 
@@ -162,6 +193,15 @@ public class ProviderRegistry {
 
     public List<ProviderEntry> getAllProviders() {
         return Collections.unmodifiableList(providers);
+    }
+
+    public StreamingChatLanguageModel getStreamingModel(String providerName) {
+        return streamingModels.get(providerName);
+    }
+
+    public StreamingChatLanguageModel getPrimaryStreamingModel() {
+        if (providers.isEmpty()) return null;
+        return streamingModels.get(providers.get(0).name());
     }
 
     public void recordSuccess(String providerName) {

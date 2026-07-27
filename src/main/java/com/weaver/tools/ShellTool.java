@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -17,9 +18,31 @@ public class ShellTool {
     private static final int TIMEOUT_SECONDS = 60;
     private static final int MAX_OUTPUT_CHARS = 10000;
 
+    // Patterns that indicate destructive/dangerous commands
+    private static final List<String> DESTRUCTIVE_PATTERNS = List.of(
+            "rm -rf", "rm -r /", "rmdir",
+            "git reset --hard", "git push --force", "git push -f",
+            "git clean -f", "git branch -D",
+            "drop table", "drop database", "truncate table",
+            "mkfs", "dd if=",
+            "> /dev/", "chmod 777",
+            "kill -9", "killall",
+            "shutdown", "reboot",
+            ":(){ :|:& };:",  // fork bomb
+            "mv / ", "rm /*"
+    );
+
     @Tool("Execute a shell command and return its output. Parameters: command (the shell command to run), workingDirectory (optional, defaults to current directory).")
     public String runCommand(String command, String workingDirectory) {
         try {
+            // Check for destructive commands and ask for confirmation
+            if (isDestructive(command)) {
+                String confirmation = askConfirmation(command);
+                if (confirmation != null) {
+                    return confirmation; // User denied
+                }
+            }
+
             Path workDir = (workingDirectory != null && !workingDirectory.isBlank())
                     ? Path.of(workingDirectory).toAbsolutePath().normalize()
                     : Path.of(System.getProperty("user.dir"));
@@ -66,5 +89,43 @@ public class ShellTool {
     @Tool("Execute a shell command in the current working directory.")
     public String run(String command) {
         return runCommand(command, null);
+    }
+
+    private boolean isDestructive(String command) {
+        String lower = command.toLowerCase().trim();
+        return DESTRUCTIVE_PATTERNS.stream().anyMatch(lower::contains);
+    }
+
+    /**
+     * Ask user for confirmation before running a destructive command.
+     * Returns null if confirmed (proceed), or an error message if denied.
+     */
+    private String askConfirmation(String command) {
+        try {
+            System.out.println();
+            System.out.println("\033[1;33m  ⚠️  DESTRUCTIVE COMMAND DETECTED\033[0m");
+            System.out.println("\033[33m  ┌─────────────────────────────────────────────────┐\033[0m");
+            System.out.println("\033[33m  │\033[0m " + truncateForDisplay(command, 47) + " \033[33m│\033[0m");
+            System.out.println("\033[33m  └─────────────────────────────────────────────────┘\033[0m");
+            System.out.print("\033[1m  Allow this command? [y/N]: \033[0m");
+            System.out.flush();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+            String response = reader.readLine();
+
+            if (response != null && (response.trim().equalsIgnoreCase("y") || response.trim().equalsIgnoreCase("yes"))) {
+                System.out.println("\033[32m  ✓ Approved\033[0m");
+                return null; // Proceed
+            } else {
+                System.out.println("\033[31m  ✗ Denied\033[0m");
+                return "BLOCKED: User denied execution of destructive command: " + command;
+            }
+        } catch (Exception e) {
+            return "BLOCKED: Could not get user confirmation for destructive command.";
+        }
+    }
+
+    private String truncateForDisplay(String text, int maxLen) {
+        return text.length() > maxLen ? text.substring(0, maxLen - 3) + "..." : text;
     }
 }

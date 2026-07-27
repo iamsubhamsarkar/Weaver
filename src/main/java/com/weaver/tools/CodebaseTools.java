@@ -128,6 +128,12 @@ public class CodebaseTools {
             }
             String newContent = content.replace(oldString, newString);
             Files.writeString(filePath, newContent);
+
+            // Generate and display colored diff
+            String diff = com.weaver.cli.DiffDisplay.generateReplacementDiff(
+                    filePath.toString(), oldString, newString);
+            System.out.println(diff);
+
             log.info("✏️ Edited file: {} (replaced {} chars)", filePath, oldString.length());
             return "Successfully replaced text in " + filePath;
         } catch (IOException e) {

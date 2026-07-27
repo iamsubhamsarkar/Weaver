@@ -14,8 +14,10 @@ import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -41,6 +43,9 @@ public class WeaverAgent {
     private final Map<String, ToolMethod> toolMethods;
 
     private Consumer<String> outputCallback = s -> {};
+    private Consumer<String> streamTokenCallback = null; // if set, streams final response token-by-token
+    private Runnable onThinkingStart = () -> {};
+    private Runnable onThinkingStop = () -> {};
 
     private record ToolMethod(Object instance, Method method) {}
 
@@ -89,6 +94,18 @@ public class WeaverAgent {
         this.outputCallback = callback;
     }
 
+    public void setOnThinkingStart(Runnable onStart) {
+        this.onThinkingStart = onStart;
+    }
+
+    public void setOnThinkingStop(Runnable onStop) {
+        this.onThinkingStop = onStop;
+    }
+
+    public void setStreamTokenCallback(Consumer<String> callback) {
+        this.streamTokenCallback = callback;
+    }
+
     public String execute(String userPrompt, String sessionId) {
         // 1. Check semantic cache
         Optional<String> cached = experienceLibrary.lookupCachedSolution(userPrompt);
@@ -130,7 +147,10 @@ public class WeaverAgent {
                         .toolSpecifications(toolSpecs)
                         .build();
 
+                onThinkingStart.run();
                 ChatResponse response = model.chat(request);
+                onThinkingStop.run();
+
                 AiMessage aiMessage = response.aiMessage();
                 messages.add(aiMessage);
 
@@ -153,10 +173,23 @@ public class WeaverAgent {
                 }
 
                 finalResponse = aiMessage.text();
+
+                // Stream the response for real-time UX if callback is set
+                if (streamTokenCallback != null && finalResponse != null && !finalResponse.isEmpty()) {
+                    // Stream word-by-word for natural appearance
+                    String[] words = finalResponse.split("(?<=\\s)"); // split keeping whitespace
+                    for (String word : words) {
+                        streamTokenCallback.accept(word);
+                        try { Thread.sleep(15); } catch (InterruptedException ignored) {}
+                    }
+                    streamTokenCallback.accept("\n");
+                }
+
                 providerRegistry.recordSuccess(currentProvider);
                 break;
 
             } catch (Exception e) {
+                onThinkingStop.run();
                 log.warn("Provider {} failed: {}", currentProvider, e.getMessage());
                 providerRegistry.recordFailure(currentProvider);
                 outputCallback.accept(String.format("  ⚠️ %s failed, trying fallback...", currentProvider));
