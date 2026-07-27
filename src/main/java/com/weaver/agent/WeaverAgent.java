@@ -208,6 +208,9 @@ public class WeaverAgent {
                 }
                 model = nextProvider.model();
                 currentProvider = nextProvider.name();
+
+                // Compress context before handing to new model (save tokens)
+                messages = ContextCompressor.compress(messages);
             }
         }
 
@@ -310,6 +313,7 @@ public class WeaverAgent {
             - After making changes, verify them by running build/test commands if appropriate.
             - Search the web or Stack Overflow when you encounter unfamiliar APIs or errors.
             - Be thorough but efficient.
+            - If a tool result shows a prior step already completed part of the task, CONTINUE from where it left off. Do NOT redo work.
 
             TOOL USAGE:
             - readFile(path): Read a file's contents.
@@ -324,10 +328,17 @@ public class WeaverAgent {
             - fetchWebPage(url): Extract text from a URL.
             - searchStackOverflow(query): Find code solutions on Stack Overflow.
 
-            RULES:
-            - Always read a file before editing it.
-            - When done, provide a clear summary of what you did.
-            - Current working directory: """ + config.getWorkspaceRoot() + """
+            RESPONSE RULES (CRITICAL):
+            - When your task is done, reply with a ONE-LINE summary. Example: "Done. Created login.html with form and gradient background."
+            - Do NOT explain the code you wrote. The user can read it themselves.
+            - Do NOT restate what the tools already did. The user saw the tool output.
+            - Do NOT provide usage instructions unless explicitly asked.
+            - NEVER say things like "This code will create..." or "You can replace the console.log line with..."
+            - Maximum final response: 2-3 short sentences. Save tokens.
+
+            WORKSPACE:
+            - Current working directory: """ + config.getWorkspaceRoot() + "\n" + """
+            - All file paths should be relative to this directory unless absolute paths are given.
             """;
     }
 
