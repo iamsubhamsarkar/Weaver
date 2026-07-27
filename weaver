@@ -6,7 +6,16 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve the real path even if called via symlink
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    # If SOURCE is relative, resolve it relative to the symlink's directory
+    [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+
 WEAVER_HOME="$HOME/.weaver"
 CREDENTIALS_FILE="$WEAVER_HOME/credentials.yml"
 JAR_FILE="$SCRIPT_DIR/target/weaver-agent-1.0.0-SNAPSHOT.jar"
@@ -39,9 +48,16 @@ build_if_needed() {
         echo -e "${CYAN}Building Weaver (first time only)...${RESET}"
         
         if command -v mvn &> /dev/null; then
-            cd "$SCRIPT_DIR" && mvn package -DskipTests -q 2>&1 | tail -3
+            cd "$SCRIPT_DIR"
+            if ! mvn package -DskipTests -q 2>&1 | tail -5; then
+                echo -e "${RED}Build failed. Running verbose build for details:${RESET}"
+                mvn package -DskipTests 2>&1 | grep -E "ERROR|FAILURE" | head -10
+            fi
         elif [ -f "$SCRIPT_DIR/mvnw" ]; then
-            cd "$SCRIPT_DIR" && ./mvnw package -DskipTests -q 2>&1 | tail -3
+            cd "$SCRIPT_DIR"
+            if ! ./mvnw package -DskipTests -q 2>&1 | tail -5; then
+                echo -e "${RED}Build failed.${RESET}"
+            fi
         else
             echo -e "${RED}Maven not found!${RESET}"
             if [[ "$OSTYPE" == "linux-gnu"* ]]; then
@@ -53,7 +69,7 @@ build_if_needed() {
         fi
 
         if [ ! -f "$JAR_FILE" ]; then
-            echo -e "${RED}Build failed. Run 'mvn package' manually to see errors.${RESET}"
+            echo -e "${RED}Build failed. Run 'cd $SCRIPT_DIR && mvn package' to see full errors.${RESET}"
             exit 1
         fi
         echo -e "${GREEN}✓ Build complete${RESET}"
