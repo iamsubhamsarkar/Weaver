@@ -2,13 +2,14 @@
 # ═══════════════════════════════════════════════════════════
 #  Download Gemma 3 270M for local smart pre-processing
 #  Run once: bash scripts/download_gemma.sh
-#  Requires: python3, pip
+#  Requires: python3, python3-venv
 # ═══════════════════════════════════════════════════════════
 
 set -e
 
 MODELS_DIR="$HOME/.weaver/models"
 GEMMA_DIR="$MODELS_DIR/gemma-3-270m-it"
+VENV_DIR="$HOME/.weaver/venv"
 
 echo "═══ Weaver Local Brain Setup ═══"
 echo ""
@@ -16,17 +17,36 @@ echo ""
 # Check Python
 if ! command -v python3 &> /dev/null; then
     echo "❌ Python3 required. Install with:"
-    echo "   Ubuntu: sudo apt install python3 python3-pip"
-    echo "   macOS:  brew install python3"
+    echo "   sudo apt install python3 python3-venv python3-full"
     exit 1
 fi
 
-# Install dependencies
-echo "📦 Installing Python dependencies..."
-pip3 install -q transformers torch --index-url https://download.pytorch.org/whl/cpu 2>/dev/null || \
-pip3 install -q transformers torch
+# Ensure venv module is available
+if ! python3 -m venv --help &> /dev/null 2>&1; then
+    echo "❌ python3-venv required. Install with:"
+    echo "   sudo apt install python3-venv python3-full"
+    exit 1
+fi
+
+# Create virtual environment
+if [ ! -d "$VENV_DIR" ]; then
+    echo "📦 Creating Python virtual environment at $VENV_DIR..."
+    python3 -m venv "$VENV_DIR"
+fi
+
+# Activate venv
+source "$VENV_DIR/bin/activate"
+
+# Install dependencies inside venv
+echo "📦 Installing Python dependencies (inside venv)..."
+pip install -q --upgrade pip
+pip install -q transformers torch --index-url https://download.pytorch.org/whl/cpu
+
+# Create models directory
+mkdir -p "$MODELS_DIR"
 
 # Download model
+echo ""
 echo "⬇️  Downloading Gemma 3 270M (instruction-tuned)..."
 echo "   This is ~540MB and only needs to happen once."
 echo ""
@@ -37,6 +57,7 @@ import os
 
 model_id = 'google/gemma-3-270m-it'
 save_path = os.path.expanduser('~/.weaver/models/gemma-3-270m-it')
+os.makedirs(save_path, exist_ok=True)
 
 print('  Downloading tokenizer...')
 tokenizer = AutoTokenizer.from_pretrained(model_id)
@@ -49,13 +70,13 @@ model.save_pretrained(save_path)
 print('  ✓ Model saved to:', save_path)
 "
 
-# Create the runner script
+# Create the runner script (uses the venv Python)
 echo "📝 Creating inference runner..."
-cat > "$MODELS_DIR/run_gemma.py" << 'PYTHON_SCRIPT'
+cat > "$MODELS_DIR/run_gemma.py" << PYTHON_SCRIPT
 #!/usr/bin/env python3
 """
 Lightweight Gemma 270M inference runner for Weaver.
-Called as subprocess: python3 run_gemma.py "prompt text"
+Called as subprocess: ~/.weaver/venv/bin/python3 run_gemma.py "prompt text"
 Outputs generated text to stdout.
 """
 import sys
@@ -100,11 +121,14 @@ PYTHON_SCRIPT
 
 chmod +x "$MODELS_DIR/run_gemma.py"
 
+# Deactivate venv
+deactivate
+
 echo ""
 echo "═══════════════════════════════════════════════════"
 echo "  ✓ Gemma 3 270M installed successfully!"
 echo "  Location: $GEMMA_DIR"
-echo "  Size: ~540MB"
+echo "  Venv: $VENV_DIR"
 echo ""
 echo "  Weaver will now use it for:"
 echo "    • Smart search query extraction"

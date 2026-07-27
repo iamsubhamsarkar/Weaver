@@ -262,17 +262,25 @@ public class LocalBrain {
     private void checkGemmaAvailability() {
         // Check if the model runner script exists
         Path runnerScript = MODELS_DIR.resolve("run_gemma.py");
+        Path venvPython = Path.of(System.getProperty("user.home"), ".weaver", "venv", "bin", "python3");
+
         if (Files.exists(runnerScript) && Files.exists(GEMMA_MODEL_PATH)) {
-            // Verify Python is available
-            try {
-                Process p = new ProcessBuilder("python3", "--version").start();
-                p.waitFor();
-                if (p.exitValue() == 0) {
-                    gemmaAvailable = true;
-                    log.info("✓ Local Gemma 270M model available for smart pre-processing");
+            // Check if venv Python exists
+            if (Files.exists(venvPython)) {
+                gemmaAvailable = true;
+                log.info("✓ Local Gemma 270M model available for smart pre-processing");
+            } else {
+                // Try system python3 as fallback
+                try {
+                    Process p = new ProcessBuilder("python3", "--version").start();
+                    p.waitFor();
+                    if (p.exitValue() == 0) {
+                        gemmaAvailable = true;
+                        log.info("✓ Local Gemma 270M available (system python)");
+                    }
+                } catch (Exception e) {
+                    gemmaAvailable = false;
                 }
-            } catch (Exception e) {
-                gemmaAvailable = false;
             }
         }
 
@@ -294,6 +302,7 @@ public class LocalBrain {
 
     /**
      * Run Gemma 270M via Python subprocess.
+     * Uses the venv Python if available, otherwise system Python.
      * Returns null if Gemma is unavailable or fails.
      */
     private String runGemma(String prompt) {
@@ -301,7 +310,12 @@ public class LocalBrain {
 
         try {
             Path runnerScript = MODELS_DIR.resolve("run_gemma.py");
-            ProcessBuilder pb = new ProcessBuilder("python3", runnerScript.toString(), prompt);
+            Path venvPython = Path.of(System.getProperty("user.home"), ".weaver", "venv", "bin", "python3");
+
+            // Use venv Python if available, otherwise system python3
+            String pythonBin = Files.exists(venvPython) ? venvPython.toString() : "python3";
+
+            ProcessBuilder pb = new ProcessBuilder(pythonBin, runnerScript.toString(), prompt);
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
