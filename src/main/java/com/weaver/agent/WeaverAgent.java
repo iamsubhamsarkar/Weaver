@@ -37,6 +37,7 @@ public class WeaverAgent {
     private final ExperienceLibraryService experienceLibrary;
     private final WeaverMemoryStore memoryStore;
     private final WeaverConfigProperties config;
+    private final LocalBrain localBrain;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final List<ToolSpecification> toolSpecs;
@@ -53,6 +54,7 @@ public class WeaverAgent {
                        ExperienceLibraryService experienceLibrary,
                        WeaverMemoryStore memoryStore,
                        WeaverConfigProperties config,
+                       LocalBrain localBrain,
                        CodebaseTools codebaseTools,
                        ShellTool shellTool,
                        WebSearchTool webSearchTool,
@@ -61,6 +63,7 @@ public class WeaverAgent {
         this.experienceLibrary = experienceLibrary;
         this.memoryStore = memoryStore;
         this.config = config;
+        this.localBrain = localBrain;
 
         this.toolSpecs = new ArrayList<>();
         this.toolMethods = new HashMap<>();
@@ -231,7 +234,7 @@ public class WeaverAgent {
                 currentProvider = nextProvider.name();
 
                 // Compress context before handing to new model
-                messages = ContextCompressor.compress(messages);
+                messages = ContextCompressor.compress(messages, localBrain, userPrompt);
             }
         }
 
@@ -251,32 +254,25 @@ public class WeaverAgent {
     }
 
     /**
-     * Auto pre-search: before the agent loop, search the web for relevant best practices.
-     * Only for code generation tasks (not for file reading, shell commands, etc.)
+     * Smart pre-search: uses LocalBrain to determine if search is needed and extract a good query.
      */
     private String performPreSearch(String userPrompt) {
-        // Only pre-search for tasks that involve creating/writing code
-        String lower = userPrompt.toLowerCase();
-        boolean isCodeTask = lower.contains("create") || lower.contains("build") || lower.contains("write")
-                || lower.contains("implement") || lower.contains("make") || lower.contains("generate")
-                || lower.contains("add") || lower.contains("develop");
+        // Use LocalBrain to classify the task
+        LocalBrain.TaskType taskType = localBrain.classifyTask(userPrompt);
 
-        // Skip pre-search for simple tasks (reading, listing, explaining)
-        boolean isSimpleTask = lower.contains("read") || lower.contains("list") || lower.contains("show")
-                || lower.contains("explain") || lower.contains("what is") || lower.contains("delete")
-                || lower.contains("run") || lower.contains("execute");
+        // Only pre-search for code generation tasks
+        if (taskType != LocalBrain.TaskType.CODE_GENERATION && taskType != LocalBrain.TaskType.UNKNOWN) {
+            return null;
+        }
 
-        if (!isCodeTask || isSimpleTask) {
+        // Use LocalBrain to extract a smart search query
+        String searchQuery = localBrain.extractSearchQuery(userPrompt);
+        if (searchQuery == null || searchQuery.isBlank()) {
             return null;
         }
 
         try {
-            // Extract key terms for search (first 100 chars, cleaned up)
-            String searchQuery = userPrompt.length() > 100
-                    ? userPrompt.substring(0, 100) + " best practices example"
-                    : userPrompt + " best practices example";
-
-            outputCallback.accept("  🌐 Pre-searching for best practices...");
+            outputCallback.accept("  🌐 Pre-searching: " + truncate(searchQuery, 60));
 
             // Use the WebSearchTool directly
             ToolMethod webSearch = toolMethods.get("webSearch");
@@ -285,7 +281,7 @@ public class WeaverAgent {
                 String searchResult = result != null ? result.toString() : null;
 
                 if (searchResult != null && !searchResult.startsWith("ERROR") && !searchResult.startsWith("No results")) {
-                    // Truncate to save tokens — only keep first 500 chars of search results
+                    // Truncate to save tokens
                     if (searchResult.length() > 500) {
                         searchResult = searchResult.substring(0, 500) + "...";
                     }
@@ -294,7 +290,7 @@ public class WeaverAgent {
                 }
             }
         } catch (Exception e) {
-            log.debug("Pre-search failed (non-critical): {}", e.getMessage());
+            log.debug("Pre-search failed: {}", e.getMessage());
         }
         return null;
     }
