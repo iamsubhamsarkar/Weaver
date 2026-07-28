@@ -79,6 +79,31 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     IS_MAC=true
 fi
 
+# ─── Step 0: Clean old residues ───────────────────────────
+echo -e "${CYAN}[0/6] Cleaning old installation...${RESET}"
+
+# Remove old global symlink
+sudo rm -f /usr/local/bin/weaver 2>/dev/null
+
+# Remove old cached data (skills, ChromaDB cache, old logs, old venv)
+rm -rf "$WEAVER_HOME/skills" 2>/dev/null
+rm -rf "$WEAVER_HOME/venv" 2>/dev/null
+rm -rf "$WEAVER_HOME/models" 2>/dev/null
+rm -rf "$WEAVER_HOME/logs" 2>/dev/null
+rm -f "$WEAVER_HOME/config.yml" 2>/dev/null
+
+# Remove old Maven build artifacts
+rm -rf "$SCRIPT_DIR/target" 2>/dev/null
+
+# Keep credentials.yml (API keys) — user doesn't want to re-enter these
+if [ -f "$WEAVER_HOME/credentials.yml" ]; then
+    echo -e "  ${GREEN}✓${RESET} Keeping API keys (~/.weaver/credentials.yml)"
+else
+    echo -e "  ${DIM}  No previous keys found${RESET}"
+fi
+
+echo -e "  ${GREEN}✓${RESET} Old residues cleared"
+
 # ─── Step 1: Java ─────────────────────────────────────────
 echo -e "${CYAN}[1/6] Checking Java...${RESET}"
 if command -v java &> /dev/null; then
