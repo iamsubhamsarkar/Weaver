@@ -212,11 +212,18 @@ public class WeaverAgent {
         }
 
         // ─── Layer 6: ReAct Loop ───
-        ProviderRegistry.ProviderEntry reactProvider = providerRegistry.getAvailableProvider(failedThisRequest);
+        // Use the primary provider if it hasn't failed, otherwise get next available
+        ProviderRegistry.ProviderEntry reactProvider;
+        if (!failedThisRequest.contains(provider.name())) {
+            reactProvider = provider; // Primary is still good, use it
+        } else {
+            reactProvider = providerRegistry.getAvailableProvider(failedThisRequest);
+        }
         if (reactProvider == null) return "ERROR: All providers unavailable.";
 
         ChatLanguageModel model = reactProvider.model();
         String currentProvider = reactProvider.name();
+        log.info("Layer 6: ReAct starting with provider={}", currentProvider);
 
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(new SystemMessage(buildSystemPrompt()));
@@ -252,9 +259,12 @@ public class WeaverAgent {
 
                 if (aiMessage.hasToolExecutionRequests()) {
                     for (ToolExecutionRequest toolCall : aiMessage.toolExecutionRequests()) {
+                        log.info("Tool call: {}({})", toolCall.name(), truncate(toolCall.arguments(), 200));
                         outputCallback.accept(String.format("  🔧 %s(%s)",
                                 toolCall.name(), truncate(toolCall.arguments(), 80)));
                         String toolResult = executeTool(toolCall);
+                        log.info("Tool result: {} chars, starts with: {}", 
+                                toolResult != null ? toolResult.length() : 0, truncate(toolResult, 100));
                         outputCallback.accept(String.format("  ← %s", truncate(toolResult, 120)));
                         messages.add(new ToolExecutionResultMessage(
                                 toolCall.id(), toolCall.name(), toolResult));
@@ -265,6 +275,8 @@ public class WeaverAgent {
                 }
 
                 finalResponse = aiMessage.text();
+                log.info("Task COMPLETE. Final response ({} chars): {}", 
+                        finalResponse != null ? finalResponse.length() : 0, truncate(finalResponse, 200));
                 providerRegistry.recordSuccess(currentProvider);
                 break;
 

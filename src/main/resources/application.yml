@@ -36,7 +36,7 @@ weaver:
       enabled: true
     cerebras:
       api-key: ${CEREBRAS_API_KEY:}
-      model: llama-3.3-70b
+      model: gemma-4-31b
       enabled: true
     mistral:
       api-key: ${MISTRAL_API_KEY:}

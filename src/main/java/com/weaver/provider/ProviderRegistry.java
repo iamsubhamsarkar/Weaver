@@ -41,7 +41,7 @@ public class ProviderRegistry {
 
     @Value("${weaver.providers.cerebras.api-key:}")
     private String cerebrasApiKey;
-    @Value("${weaver.providers.cerebras.model:llama-3.3-70b}")
+    @Value("${weaver.providers.cerebras.model:gemma-4-31b}")
     private String cerebrasModel;
     @Value("${weaver.providers.cerebras.enabled:true}")
     private boolean cerebrasEnabled;
