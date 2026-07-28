@@ -151,11 +151,11 @@ if ! ollama list &> /dev/null 2>&1; then
 fi
 
 # Pull Gemma model if not already present
-if ollama list 2>/dev/null | grep -q "gemma3:1b"; then
+if ollama list 2>/dev/null | grep -q "gemma3:270m"; then
     echo -e "  ${GREEN}✓${RESET} Gemma model ready"
 else
     echo -e "  ${DIM}Pulling Gemma 3 1B model (~815MB, one-time)...${RESET}"
-    ollama pull gemma3:1b 2>&1 | grep -E "pulling|success|verifying" | while read line; do
+    ollama pull gemma3:270m 2>&1 | grep -E "pulling|success|verifying" | while read line; do
         echo -e "       ${DIM}$line${RESET}"
     done
     echo -e "  ${GREEN}✓${RESET} Gemma model pulled"

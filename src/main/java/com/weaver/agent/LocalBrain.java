@@ -275,7 +275,7 @@ public class LocalBrain {
                 preWarmOllama();
             } else {
                 gemmaAvailable = false;
-                log.info("Local brain not available. Install with: curl -fsSL https://ollama.com/install.sh | sh && ollama pull gemma3:1b");
+                log.info("Local brain not available. Install with: curl -fsSL https://ollama.com/install.sh | sh && ollama pull gemma3:270m");
             }
         } catch (Exception e) {
             gemmaAvailable = false;
@@ -291,7 +291,7 @@ public class LocalBrain {
         Thread warmupThread = new Thread(() -> {
             try {
                 log.info("  Pre-warming Ollama in background...");
-                ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:1b", "hi");
+                ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:270m", "hi");
                 pb.redirectErrorStream(true);
                 Process process = pb.start();
                 process.getInputStream().readAllBytes();
@@ -324,7 +324,7 @@ public class LocalBrain {
 
     /**
      * Run a prompt through Ollama's Gemma model.
-     * Uses: ollama run gemma3:1b "prompt"
+     * Uses: ollama run gemma3:270m "prompt"
      * Returns null if unavailable or fails.
      */
     private String runGemma(String prompt) {
@@ -334,11 +334,11 @@ public class LocalBrain {
         }
 
         long startMs = System.currentTimeMillis();
-        log.info("  [LocalBrain] Calling Ollama gemma3:1b...");
+        log.info("  [LocalBrain] Calling Ollama gemma3:270m...");
         log.debug("  [LocalBrain] Prompt: {}", prompt.length() > 150 ? prompt.substring(0, 150) + "..." : prompt);
 
         try {
-            ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:1b", prompt);
+            ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:270m", prompt);
             pb.redirectErrorStream(true);
             Process process = pb.start();
 

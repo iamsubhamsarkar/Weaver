@@ -27,7 +27,7 @@ public class ProviderRegistry {
 
     @Value("${weaver.providers.groq.api-key:}")
     private String groqApiKey;
-    @Value("${weaver.providers.groq.model:llama-3.3-70b-versatile}")
+    @Value("${weaver.providers.groq.model:llama-3-groq-70b-8192-tool-use-preview}")
     private String groqModel;
     @Value("${weaver.providers.groq.enabled:true}")
     private boolean groqEnabled;
@@ -55,7 +55,7 @@ public class ProviderRegistry {
 
     @Value("${weaver.providers.openrouter.api-key:}")
     private String openrouterApiKey;
-    @Value("${weaver.providers.openrouter.model:meta-llama/llama-3.3-70b-instruct:free}")
+    @Value("${weaver.providers.openrouter.model:nvidia/nemotron-3-super-120b-a12b:free}")
     private String openrouterModel;
     @Value("${weaver.providers.openrouter.enabled:true}")
     private boolean openrouterEnabled;
