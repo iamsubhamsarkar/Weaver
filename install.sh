@@ -9,8 +9,6 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WEAVER_HOME="$HOME/.weaver"
-VENV_DIR="$WEAVER_HOME/venv"
-MODELS_DIR="$WEAVER_HOME/models"
 INSTALL_DIR="/usr/local/bin"
 
 RED='\033[1;31m'
@@ -20,8 +18,7 @@ CYAN='\033[1;36m'
 DIM='\033[2m'
 RESET='\033[0m'
 
-# ─── Functions ────────────────────────────────────────────
-
+# ─── Key setup function ──────────────────────────────────
 setup_keys() {
     echo ""
     echo -e "  ${DIM}Weaver needs at least ONE free AI API key.${RESET}"
@@ -83,13 +80,13 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 # ─── Step 1: Java ─────────────────────────────────────────
-echo -e "${CYAN}[1/7] Checking Java...${RESET}"
+echo -e "${CYAN}[1/6] Checking Java...${RESET}"
 if command -v java &> /dev/null; then
     echo -e "  ${GREEN}✓${RESET} Java found"
 else
-    echo -e "  ${YELLOW}⚙ Installing Java 21 (this may take a minute)...${RESET}"
+    echo -e "  ${YELLOW}⚙ Installing Java 21...${RESET}"
     if $IS_LINUX; then
-        sudo apt update -qq && sudo apt install -y openjdk-21-jdk 2>&1 | grep -E "^(Get|Unpacking|Setting)" | tail -5
+        sudo apt update -qq && sudo apt install -y openjdk-21-jdk 2>&1 | grep -E "^(Get|Setting)" | tail -3
     elif $IS_MAC; then
         brew install openjdk@21 2>&1 | tail -3 || { echo -e "${RED}  Install Java: brew install openjdk@21${RESET}"; exit 1; }
     fi
@@ -97,128 +94,65 @@ else
 fi
 
 # ─── Step 2: Maven ────────────────────────────────────────
-echo -e "${CYAN}[2/7] Checking Maven...${RESET}"
+echo -e "${CYAN}[2/6] Checking Maven...${RESET}"
 if command -v mvn &> /dev/null; then
     echo -e "  ${GREEN}✓${RESET} Maven found"
 else
     echo -e "  ${YELLOW}⚙ Installing Maven...${RESET}"
     if $IS_LINUX; then
-        sudo apt install -y maven 2>&1 | grep -E "^(Get|Unpacking|Setting)" | tail -3
+        sudo apt install -y maven 2>&1 | grep -E "^(Get|Setting)" | tail -3
     elif $IS_MAC; then
         brew install maven 2>&1 | tail -3 || { echo -e "${RED}  Install Maven: brew install maven${RESET}"; exit 1; }
     fi
     echo -e "  ${GREEN}✓${RESET} Maven installed"
 fi
 
-# ─── Step 3: Python + venv ────────────────────────────────
-echo -e "${CYAN}[3/7] Setting up Python environment...${RESET}"
-if ! command -v python3 &> /dev/null; then
-    echo -e "  ${YELLOW}⚙ Installing Python3...${RESET}"
-    if $IS_LINUX; then
-        sudo apt install -y python3 python3-venv python3-full 2>&1 | grep -E "^(Get|Unpacking|Setting)" | head -5
-    elif $IS_MAC; then
-        brew install python3 2>/dev/null
-    fi
-fi
+# ─── Step 3: Ollama + Gemma 270M (Local Brain) ────────────
+echo -e "${CYAN}[3/6] Setting up Local Brain (Ollama + Gemma 270M)...${RESET}"
 
-# Ensure venv module
-if $IS_LINUX; then
-    python3 -m venv --help > /dev/null 2>&1 || sudo apt install -y python3-venv python3-full 2>&1 | tail -3
-fi
-
-# Create venv
-if [ ! -d "$VENV_DIR" ]; then
-    echo -e "  ${DIM}Creating virtual environment...${RESET}"
-    python3 -m venv "$VENV_DIR"
-fi
-echo -e "  ${GREEN}✓${RESET} Python environment ready"
-
-# ─── Step 4: Local Brain (Gemma 270M) ────────────────────
-echo -e "${CYAN}[4/7] Setting up Local Brain (Gemma 270M, ~540MB)...${RESET}"
-GEMMA_PATH="$MODELS_DIR/gemma-3-270m-it"
-
-if [ -d "$GEMMA_PATH" ] && [ "$(ls -A $GEMMA_PATH 2>/dev/null)" ]; then
-    echo -e "  ${GREEN}✓${RESET} Gemma 270M already installed"
+if command -v ollama &> /dev/null; then
+    echo -e "  ${GREEN}✓${RESET} Ollama found"
 else
-    echo -e "  ${DIM}Downloading dependencies + model (~2.3GB total)...${RESET}"
-    echo -e "  ${DIM}This takes 5-15 min on first install. Progress shown below.${RESET}"
-    echo ""
-    mkdir -p "$MODELS_DIR"
+    echo -e "  ${YELLOW}⚙ Installing Ollama (~100MB)...${RESET}"
+    curl -fsSL https://ollama.com/install.sh | sh 2>&1 | tail -3
+    echo -e "  ${GREEN}✓${RESET} Ollama installed"
+fi
 
-    source "$VENV_DIR/bin/activate"
+# Start Ollama service if not running
+if ! ollama list &> /dev/null 2>&1; then
+    echo -e "  ${DIM}Starting Ollama service...${RESET}"
+    ollama serve &> /dev/null &
+    sleep 3
+fi
 
-    echo -e "  ${DIM}[4a] Installing PyTorch CPU (~1.8GB)...${RESET}"
-    pip install --upgrade pip 2>&1 | tail -1
-    pip install transformers torch --index-url https://download.pytorch.org/whl/cpu 2>&1 | grep -E "Downloading|Installing|Successfully" | while read line; do
+# Pull Gemma model if not already present
+if ollama list 2>/dev/null | grep -q "gemma3:1b"; then
+    echo -e "  ${GREEN}✓${RESET} Gemma model ready"
+else
+    echo -e "  ${DIM}Pulling Gemma 3 1B model (~815MB, one-time)...${RESET}"
+    ollama pull gemma3:1b 2>&1 | grep -E "pulling|success|verifying" | while read line; do
         echo -e "       ${DIM}$line${RESET}"
     done
-
-    echo ""
-    echo -e "  ${DIM}[4b] Downloading Gemma 3 270M model (~540MB)...${RESET}"
-
-    python3 << 'PYEOF'
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import os, sys
-
-model_id = 'google/gemma-3-270m-it'
-save_path = os.path.expanduser('~/.weaver/models/gemma-3-270m-it')
-os.makedirs(save_path, exist_ok=True)
-
-print('       Downloading tokenizer...', flush=True)
-tokenizer = AutoTokenizer.from_pretrained(model_id)
-tokenizer.save_pretrained(save_path)
-print('       ✓ Tokenizer done', flush=True)
-
-print('       Downloading model weights (~540MB)...', flush=True)
-model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype='auto')
-model.save_pretrained(save_path)
-print('       ✓ Model weights done', flush=True)
-PYEOF
-
-    # Create inference runner
-    cat > "$MODELS_DIR/run_gemma.py" << 'PYEOF'
-#!/usr/bin/env python3
-import sys, os
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-import warnings; warnings.filterwarnings("ignore")
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
-MODEL_PATH = os.path.expanduser("~/.weaver/models/gemma-3-270m-it")
-def generate(prompt):
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-    model = AutoModelForCausalLM.from_pretrained(MODEL_PATH, torch_dtype=torch.float32)
-    model.eval()
-    formatted = f"<start_of_turn>user\n{prompt}<end_of_turn>\n<start_of_turn>model\n"
-    inputs = tokenizer(formatted, return_tensors="pt")
-    with torch.no_grad():
-        outputs = model.generate(**inputs, max_new_tokens=60, do_sample=False)
-    print(tokenizer.decode(outputs[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True).strip())
-if __name__ == "__main__":
-    if len(sys.argv) >= 2: generate(sys.argv[1])
-PYEOF
-    chmod +x "$MODELS_DIR/run_gemma.py"
-    deactivate 2>/dev/null || true
-
-    echo -e "  ${GREEN}✓${RESET} Gemma 270M installed"
+    echo -e "  ${GREEN}✓${RESET} Gemma model pulled"
 fi
 
-# ─── Step 5: Build Weaver ─────────────────────────────────
-echo -e "${CYAN}[5/7] Building Weaver...${RESET}"
+# ─── Step 4: Build Weaver ─────────────────────────────────
+echo -e "${CYAN}[4/6] Building Weaver...${RESET}"
 cd "$SCRIPT_DIR"
-echo -e "  ${DIM}Downloading dependencies + compiling (first time takes 2-3 min)...${RESET}"
-if mvn package -DskipTests 2>&1 | grep -E "Downloading|Downloaded|BUILD" | while read line; do
+echo -e "  ${DIM}Downloading dependencies + compiling...${RESET}"
+if mvn package -DskipTests 2>&1 | grep -E "Downloading|BUILD" | tail -10 | while read line; do
     echo -e "       ${DIM}$line${RESET}"
 done; then
     if [ -f "$SCRIPT_DIR/target/weaver-agent-1.0.0-SNAPSHOT.jar" ]; then
         echo -e "  ${GREEN}✓${RESET} Build successful"
     else
-        echo -e "  ${RED}✗ Build failed${RESET}"
+        echo -e "  ${RED}✗ Build failed. Run 'mvn package' for details.${RESET}"
         exit 1
     fi
 fi
 
-# ─── Step 6: Install global command ───────────────────────
-echo -e "${CYAN}[6/7] Installing 'weaver' command...${RESET}"
+# ─── Step 5: Install global command ───────────────────────
+echo -e "${CYAN}[5/6] Installing 'weaver' command...${RESET}"
 chmod +x "$SCRIPT_DIR/weaver"
 chmod +x "$SCRIPT_DIR/scripts/"*.sh 2>/dev/null || true
 
@@ -229,8 +163,8 @@ else
 fi
 echo -e "  ${GREEN}✓${RESET} 'weaver' available globally"
 
-# ─── Step 7: API Keys ────────────────────────────────────
-echo -e "${CYAN}[7/7] API Key Setup...${RESET}"
+# ─── Step 6: API Keys ────────────────────────────────────
+echo -e "${CYAN}[6/6] API Key Setup...${RESET}"
 CREDENTIALS_FILE="$WEAVER_HOME/credentials.yml"
 
 if [ -f "$CREDENTIALS_FILE" ] && grep "api-key:" "$CREDENTIALS_FILE" 2>/dev/null | grep -qv "YOUR_"; then
@@ -248,9 +182,9 @@ echo ""
 echo -e "  Run ${CYAN}weaver${RESET} from any directory to start."
 echo ""
 echo -e "${DIM}  Components installed:"
-echo "    • Java 21"
+echo "    • Java 21 (runtime)"
 echo "    • Weaver Agent (JAR)"
-echo "    • Gemma 270M local brain (~540MB)"
-echo "    • Python venv (for local inference)"
+echo "    • Ollama (local AI runtime)"
+echo "    • Gemma 3 1B (local brain for validation)"
 echo -e "    • API keys (~/.weaver/credentials.yml)${RESET}"
 echo ""

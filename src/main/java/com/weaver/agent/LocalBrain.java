@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
-import java.nio.file.*;
 import java.util.*;
 import java.util.regex.*;
 
@@ -27,8 +26,6 @@ import java.util.regex.*;
 public class LocalBrain {
 
     private static final Logger log = LoggerFactory.getLogger(LocalBrain.class);
-    private static final Path MODELS_DIR = Path.of(System.getProperty("user.home"), ".weaver", "models");
-    private static final Path GEMMA_MODEL_PATH = MODELS_DIR.resolve("gemma-3-270m-it");
 
     private final EmbeddingModel embeddingModel;
     private boolean gemmaAvailable = false;
@@ -257,36 +254,28 @@ public class LocalBrain {
         }
     }
 
-    // ─── Gemma 270M Integration (optional, subprocess-based) ─────
+    // ─── Gemma via Ollama Integration ─────────────────────────
 
     private void checkGemmaAvailability() {
-        // Check if the model runner script exists
-        Path runnerScript = MODELS_DIR.resolve("run_gemma.py");
-        Path venvPython = Path.of(System.getProperty("user.home"), ".weaver", "venv", "bin", "python3");
+        try {
+            // Check if Ollama is installed and the model is available
+            ProcessBuilder pb = new ProcessBuilder("ollama", "list");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
 
-        if (Files.exists(runnerScript) && Files.exists(GEMMA_MODEL_PATH)) {
-            // Check if venv Python exists
-            if (Files.exists(venvPython)) {
+            String output = new String(p.getInputStream().readAllBytes());
+            boolean completed = p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+
+            if (completed && p.exitValue() == 0 && output.contains("gemma")) {
                 gemmaAvailable = true;
-                log.info("✓ Local Gemma 270M model available for smart pre-processing");
+                log.info("✓ Local brain available (Ollama + Gemma)");
             } else {
-                // Try system python3 as fallback
-                try {
-                    Process p = new ProcessBuilder("python3", "--version").start();
-                    p.waitFor();
-                    if (p.exitValue() == 0) {
-                        gemmaAvailable = true;
-                        log.info("✓ Local Gemma 270M available (system python)");
-                    }
-                } catch (Exception e) {
-                    gemmaAvailable = false;
-                }
+                gemmaAvailable = false;
+                log.info("Local brain not available. Install with: curl -fsSL https://ollama.com/install.sh | sh && ollama pull gemma3:1b");
             }
-        }
-
-        if (!gemmaAvailable) {
-            log.info("Local Gemma 270M not found. Using embedding-based pre-processing.");
-            log.info("  To enable: run 'bash scripts/download_gemma.sh'");
+        } catch (Exception e) {
+            gemmaAvailable = false;
+            log.info("Ollama not found. Using embedding-based pre-processing only.");
         }
     }
 
@@ -301,21 +290,15 @@ public class LocalBrain {
     }
 
     /**
-     * Run Gemma 270M via Python subprocess.
-     * Uses the venv Python if available, otherwise system Python.
-     * Returns null if Gemma is unavailable or fails.
+     * Run a prompt through Ollama's Gemma model.
+     * Uses: ollama run gemma3:1b "prompt"
+     * Returns null if unavailable or fails.
      */
     private String runGemma(String prompt) {
         if (!gemmaAvailable) return null;
 
         try {
-            Path runnerScript = MODELS_DIR.resolve("run_gemma.py");
-            Path venvPython = Path.of(System.getProperty("user.home"), ".weaver", "venv", "bin", "python3");
-
-            // Use venv Python if available, otherwise system python3
-            String pythonBin = Files.exists(venvPython) ? venvPython.toString() : "python3";
-
-            ProcessBuilder pb = new ProcessBuilder(pythonBin, runnerScript.toString(), prompt);
+            ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:1b", prompt);
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
@@ -327,16 +310,18 @@ public class LocalBrain {
                 }
             }
 
-            boolean completed = process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+            boolean completed = process.waitFor(15, java.util.concurrent.TimeUnit.SECONDS);
             if (!completed) {
                 process.destroyForcibly();
                 return null;
             }
 
+            if (process.exitValue() != 0) return null;
+
             String result = output.toString().trim();
             return result.isEmpty() ? null : result;
         } catch (Exception e) {
-            log.debug("Gemma inference failed: {}", e.getMessage());
+            log.debug("Ollama inference failed: {}", e.getMessage());
             return null;
         }
     }
