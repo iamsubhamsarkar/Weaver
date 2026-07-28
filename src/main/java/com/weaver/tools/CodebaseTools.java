@@ -107,6 +107,20 @@ public class CodebaseTools {
         try {
             Path filePath = Path.of(path).toAbsolutePath().normalize();
             Files.createDirectories(filePath.getParent());
+
+            // Safety check: don't overwrite a larger file with significantly smaller content
+            if (Files.exists(filePath)) {
+                long existingSize = Files.size(filePath);
+                long newSize = content.length();
+                if (existingSize > 500 && newSize < existingSize / 3) {
+                    log.warn("BLOCKED: writeFile would shrink {} from {} to {} chars (>66% reduction)",
+                            filePath, existingSize, newSize);
+                    return "ERROR: Refusing to overwrite " + filePath + " (" + existingSize
+                            + " chars) with much smaller content (" + newSize
+                            + " chars). Use editFile for modifications, or delete the file first if you intend to replace it.";
+                }
+            }
+
             Files.writeString(filePath, content);
             log.info("✍️ Wrote file: {} ({} chars)", filePath, content.length());
             return "Successfully wrote " + content.length() + " characters to " + filePath;

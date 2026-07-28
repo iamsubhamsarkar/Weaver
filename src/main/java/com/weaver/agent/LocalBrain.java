@@ -271,6 +271,8 @@ public class LocalBrain {
             if (completed && p.exitValue() == 0 && output.contains("gemma")) {
                 gemmaAvailable = true;
                 log.info("✓ Local brain available (Ollama + Gemma)");
+                // Pre-warm the model so first call is fast
+                preWarmOllama();
             } else {
                 gemmaAvailable = false;
                 log.info("Local brain not available. Install with: curl -fsSL https://ollama.com/install.sh | sh && ollama pull gemma3:1b");
@@ -278,6 +280,30 @@ public class LocalBrain {
         } catch (Exception e) {
             gemmaAvailable = false;
             log.info("Ollama not found. Using embedding-based pre-processing only.");
+        }
+    }
+
+    /**
+     * Pre-warm Ollama by sending a tiny prompt.
+     * This loads the model into memory so subsequent calls are fast (~1-2s instead of 30-60s).
+     */
+    private void preWarmOllama() {
+        try {
+            log.info("  Pre-warming Ollama (loading model into RAM)...");
+            ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:1b", "hi");
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            // Drain output
+            process.getInputStream().readAllBytes();
+            boolean done = process.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
+            if (done && process.exitValue() == 0) {
+                log.info("  ✓ Ollama pre-warmed (model loaded in RAM)");
+            } else {
+                log.warn("  Pre-warm slow or failed. First Gemma call may be slow.");
+                if (!done) process.destroyForcibly();
+            }
+        } catch (Exception e) {
+            log.warn("  Pre-warm failed: {}", e.getMessage());
         }
     }
 
@@ -311,30 +337,26 @@ public class LocalBrain {
             pb.redirectErrorStream(true);
             Process process = pb.start();
 
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-
-            boolean completed = process.waitFor(15, java.util.concurrent.TimeUnit.SECONDS);
+            // Strict 5 second timeout — if model isn't warm, skip validation
+            boolean completed = process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
             long elapsed = System.currentTimeMillis() - startMs;
 
             if (!completed) {
                 process.destroyForcibly();
-                log.warn("  [LocalBrain] Gemma TIMEOUT after {}ms", elapsed);
+                process.waitFor(1, java.util.concurrent.TimeUnit.SECONDS); // wait for cleanup
+                log.warn("  [LocalBrain] Gemma TIMEOUT after {}ms (5s limit). Skipping.", elapsed);
                 return null;
             }
+
+            // Read output only after process completes
+            String result = new String(process.getInputStream().readAllBytes()).trim();
 
             if (process.exitValue() != 0) {
                 log.warn("  [LocalBrain] Gemma exited with code {} after {}ms", process.exitValue(), elapsed);
                 return null;
             }
 
-            String result = output.toString().trim();
-            log.info("  [LocalBrain] Gemma responded in {}ms: '{}'", elapsed, 
+            log.info("  [LocalBrain] Gemma responded in {}ms: '{}'", elapsed,
                     result.length() > 100 ? result.substring(0, 100) + "..." : result);
             return result.isEmpty() ? null : result;
         } catch (Exception e) {
