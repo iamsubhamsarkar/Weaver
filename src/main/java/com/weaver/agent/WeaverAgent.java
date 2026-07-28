@@ -113,14 +113,22 @@ public class WeaverAgent {
     }
 
     public String execute(String userPrompt, String sessionId) {
+        log.info("════════════════════════════════════════════════════════════");
+        log.info("NEW TASK: '{}'", userPrompt);
+        log.info("Session: {}, Workspace: {}", sessionId, config.getWorkspaceRoot());
+        log.info("════════════════════════════════════════════════════════════");
+
         // ═══ OPTIMIZATION PIPELINE ═══
         // Cache → Skill → Plan-then-Execute → ReAct (fallback)
 
         // ─── Layer 1: Semantic Cache (0 API calls) ───
+        log.debug("Layer 1: Checking semantic cache...");
         Optional<String> cached = experienceLibrary.lookupCachedSolution(userPrompt);
         if (cached.isPresent()) {
+            log.info("Cache HIT. Validating relevance...");
             // Gemma gate: validate cache is actually relevant
             if (localBrain.validateCacheRelevance(userPrompt, cached.get())) {
+                log.info("Cache ACCEPTED. Returning cached response.");
                 outputCallback.accept("\n🎯 Cache hit — instant response.");
                 streamResponse(cached.get());
                 return cached.get();
@@ -145,6 +153,7 @@ public class WeaverAgent {
         // ─── Layer 3: Classify task + Select tools ───
         LocalBrain.TaskType taskType = localBrain.classifyTask(userPrompt);
         List<ToolSpecification> selectedTools = ToolSelector.selectTools(taskType, toolSpecs, userPrompt);
+        log.info("Layer 3: Classification={}, Tools selected={}/{}", taskType, selectedTools.size(), toolSpecs.size());
 
         // ─── Layer 4: Pre-search for code gen tasks ───
         String preSearchContext = null;
@@ -168,6 +177,7 @@ public class WeaverAgent {
         boolean usePlan = (taskType == LocalBrain.TaskType.BUG_FIX
                 || taskType == LocalBrain.TaskType.SHELL_COMMAND
                 || taskType == LocalBrain.TaskType.FILE_READ);
+        log.info("Layer 5: Strategy={}, Provider={}", usePlan ? "PLAN" : "REACT", provider.name());
 
         if (usePlan) {
             outputCallback.accept(String.format("  🧠 %s | %d tools | Plan mode", taskType, selectedTools.size()));
@@ -224,6 +234,7 @@ public class WeaverAgent {
 
         while (steps < maxSteps) {
             steps++;
+            log.info("ReAct Step {}/{} [provider={}]", steps, maxSteps, currentProvider);
             outputCallback.accept(String.format("\n⚡ Step %d/%d [%s]", steps, maxSteps, currentProvider));
 
             try {
@@ -259,6 +270,8 @@ public class WeaverAgent {
 
             } catch (Exception e) {
                 onThinkingStop.run();
+                log.error("Provider {} FAILED: {}", currentProvider, e.getMessage());
+                log.debug("Full error:", e);
                 failedThisRequest.add(currentProvider);
                 providerRegistry.classifyError(currentProvider, e);
                 outputCallback.accept(String.format("  ⚠️ %s failed, switching...", currentProvider));

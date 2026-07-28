@@ -109,6 +109,7 @@ public class WeaverCli implements CommandLineRunner {
 
     private void executeTask(String input) {
         long start = System.currentTimeMillis();
+        log.info("USER INPUT: '{}'", input);
 
         try {
             // Run the agent (output callbacks handle real-time display)
