@@ -81,10 +81,12 @@ public class LocalBrain {
                 }
             }
 
-            log.debug("Task classified as {} (score: {:.3f})", best, bestScore);
+            log.info("  [LocalBrain] Classification scores: {}", scores);
+            log.info("  [LocalBrain] Best={} (score={}), threshold=0.3 → result={}", 
+                    best, String.format("%.3f", bestScore), bestScore > 0.3 ? best : "UNKNOWN");
             return bestScore > 0.3 ? best : TaskType.UNKNOWN;
         } catch (Exception e) {
-            log.debug("Classification failed: {}", e.getMessage());
+            log.warn("  [LocalBrain] Classification FAILED: {}", e.getMessage());
             return TaskType.UNKNOWN;
         }
     }
@@ -295,7 +297,14 @@ public class LocalBrain {
      * Returns null if unavailable or fails.
      */
     private String runGemma(String prompt) {
-        if (!gemmaAvailable) return null;
+        if (!gemmaAvailable) {
+            log.info("  [LocalBrain] Gemma NOT available — skipping (pass-through)");
+            return null;
+        }
+
+        long startMs = System.currentTimeMillis();
+        log.info("  [LocalBrain] Calling Ollama gemma3:1b...");
+        log.debug("  [LocalBrain] Prompt: {}", prompt.length() > 150 ? prompt.substring(0, 150) + "..." : prompt);
 
         try {
             ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:1b", prompt);
@@ -311,17 +320,25 @@ public class LocalBrain {
             }
 
             boolean completed = process.waitFor(15, java.util.concurrent.TimeUnit.SECONDS);
+            long elapsed = System.currentTimeMillis() - startMs;
+
             if (!completed) {
                 process.destroyForcibly();
+                log.warn("  [LocalBrain] Gemma TIMEOUT after {}ms", elapsed);
                 return null;
             }
 
-            if (process.exitValue() != 0) return null;
+            if (process.exitValue() != 0) {
+                log.warn("  [LocalBrain] Gemma exited with code {} after {}ms", process.exitValue(), elapsed);
+                return null;
+            }
 
             String result = output.toString().trim();
+            log.info("  [LocalBrain] Gemma responded in {}ms: '{}'", elapsed, 
+                    result.length() > 100 ? result.substring(0, 100) + "..." : result);
             return result.isEmpty() ? null : result;
         } catch (Exception e) {
-            log.debug("Ollama inference failed: {}", e.getMessage());
+            log.warn("  [LocalBrain] Gemma FAILED: {}", e.getMessage());
             return null;
         }
     }
@@ -334,7 +351,8 @@ public class LocalBrain {
      * If Gemma is unavailable, always returns true (don't block).
      */
     public boolean validateCacheRelevance(String userPrompt, String cachedSolution) {
-        if (!gemmaAvailable) return true; // No Gemma = don't block, use cache as-is
+        log.info("  [Gate] validateCacheRelevance: gemmaAvailable={}", gemmaAvailable);
+        if (!gemmaAvailable) { log.info("  [Gate] → PASS (no Gemma)"); return true; }
 
         String truncatedSolution = cachedSolution.length() > 300
                 ? cachedSolution.substring(0, 300) : cachedSolution;
@@ -345,8 +363,10 @@ public class LocalBrain {
             + "User request: " + userPrompt + "\n"
             + "Cached solution (preview): " + truncatedSolution);
 
-        if (result == null) return true; // Gemma failed = don't block
-        return !result.trim().toUpperCase().startsWith("NO");
+        if (result == null) { log.info("  [Gate] → PASS (Gemma returned null)"); return true; }
+        boolean pass = !result.trim().toUpperCase().startsWith("NO");
+        log.info("  [Gate] → {} (Gemma said: '{}')", pass ? "PASS" : "REJECT", result.trim());
+        return pass;
     }
 
     /**
@@ -354,7 +374,8 @@ public class LocalBrain {
      * Returns true if the skill should be replayed, false if it should be skipped.
      */
     public boolean validateSkillFit(String userPrompt, String skillDescription) {
-        if (!gemmaAvailable) return true;
+        log.info("  [Gate] validateSkillFit: gemmaAvailable={}", gemmaAvailable);
+        if (!gemmaAvailable) { log.info("  [Gate] → PASS (no Gemma)"); return true; }
 
         String result = runGemma(
             "Can this stored skill be reused for the new task? "
@@ -362,16 +383,15 @@ public class LocalBrain {
             + "Stored skill was for: " + skillDescription + "\n"
             + "New task: " + userPrompt);
 
-        if (result == null) return true;
-        return !result.trim().toUpperCase().startsWith("NO");
+        if (result == null) { log.info("  [Gate] → PASS (Gemma returned null)"); return true; }
+        boolean pass = !result.trim().toUpperCase().startsWith("NO");
+        log.info("  [Gate] → {} (Gemma said: '{}')", pass ? "PASS" : "REJECT", result.trim());
+        return pass;
     }
 
-    /**
-     * Validate whether web search results are relevant to the task.
-     * Returns true if results should be injected as context, false if they should be discarded.
-     */
     public boolean validateSearchRelevance(String userPrompt, String searchResults) {
-        if (!gemmaAvailable) return true;
+        log.info("  [Gate] validateSearchRelevance: gemmaAvailable={}", gemmaAvailable);
+        if (!gemmaAvailable) { log.info("  [Gate] → PASS (no Gemma)"); return true; }
 
         String truncatedResults = searchResults.length() > 300
                 ? searchResults.substring(0, 300) : searchResults;
@@ -382,18 +402,18 @@ public class LocalBrain {
             + "Task: " + userPrompt + "\n"
             + "Search results (preview): " + truncatedResults);
 
-        if (result == null) return true;
-        return !result.trim().toUpperCase().startsWith("NO");
+        if (result == null) { log.info("  [Gate] → PASS (Gemma returned null)"); return true; }
+        boolean pass = !result.trim().toUpperCase().startsWith("NO");
+        log.info("  [Gate] → {} (Gemma said: '{}')", pass ? "PASS" : "REJECT", result.trim());
+        return pass;
     }
 
-    /**
-     * Validate whether a plan JSON is structurally valid and makes sense.
-     * Returns true if the plan should be executed, false if it should be rejected.
-     */
     public boolean validatePlanJson(String userPrompt, String planJson) {
+        log.info("  [Gate] validatePlanJson: gemmaAvailable={}", gemmaAvailable);
         if (!gemmaAvailable) {
-            // Without Gemma, at least check basic JSON structure
-            return planJson != null && planJson.contains("\"steps\"") && planJson.contains("\"tool\"");
+            boolean structureOk = planJson != null && planJson.contains("\"steps\"") && planJson.contains("\"tool\"");
+            log.info("  [Gate] → {} (no Gemma, basic JSON check)", structureOk ? "PASS" : "REJECT");
+            return structureOk;
         }
 
         String truncatedPlan = planJson.length() > 500
@@ -407,22 +427,24 @@ public class LocalBrain {
             + "Plan: " + truncatedPlan);
 
         if (result == null) {
-            // Fallback: basic structure check
-            return planJson.contains("\"steps\"") && planJson.contains("\"tool\"");
+            boolean structureOk = planJson.contains("\"steps\"") && planJson.contains("\"tool\"");
+            log.info("  [Gate] → {} (Gemma null, fallback JSON check)", structureOk ? "PASS" : "REJECT");
+            return structureOk;
         }
-        return !result.trim().toUpperCase().startsWith("NO");
+        boolean pass = !result.trim().toUpperCase().startsWith("NO");
+        log.info("  [Gate] → {} (Gemma said: '{}')", pass ? "PASS" : "REJECT", result.trim());
+        return pass;
     }
 
-    /**
-     * Validate whether the output of a task makes sense (post-execution check).
-     * Returns true if the output should be cached/stored, false if it seems wrong.
-     */
     public boolean validateOutput(String userPrompt, String toolName, String result) {
-        if (!gemmaAvailable) return true;
+        log.info("  [Gate] validateOutput: tool={}, gemmaAvailable={}", toolName, gemmaAvailable);
+        if (!gemmaAvailable) { log.info("  [Gate] → PASS (no Gemma)"); return true; }
 
         // Only validate significant outputs (writeFile, run)
-        if (toolName == null) return true;
-        if (!toolName.equals("writeFile") && !toolName.equals("run")) return true;
+        if (toolName == null || (!toolName.equals("writeFile") && !toolName.equals("run"))) {
+            log.info("  [Gate] → PASS (tool '{}' not validated)", toolName);
+            return true;
+        }
 
         String truncatedResult = result.length() > 200
                 ? result.substring(0, 200) : result;
@@ -434,8 +456,10 @@ public class LocalBrain {
             + "Tool: " + toolName + "\n"
             + "Result: " + truncatedResult);
 
-        if (gemmaResult == null) return true;
-        return !gemmaResult.trim().toUpperCase().startsWith("NO");
+        if (gemmaResult == null) { log.info("  [Gate] → PASS (Gemma returned null)"); return true; }
+        boolean pass = !gemmaResult.trim().toUpperCase().startsWith("NO");
+        log.info("  [Gate] → {} (Gemma said: '{}')", pass ? "PASS" : "REJECT", gemmaResult.trim());
+        return pass;
     }
 
     // ─── Utility ─────────────────────────────────────────────────
