@@ -74,14 +74,15 @@ public class ProviderRegistry {
         }
 
         // ─── Mistral: 7 models, same API key ────────────────────────
+        // API IDs verified from docs.mistral.ai/models/overview (July 2026)
         if (mistralEnabled && !mistralApiKey.isBlank()) {
-            registerMistralModel("mistral/medium-3.5", "mistral-medium-3-5-2604", 4, 131072, 30);
+            registerMistralModel("mistral/medium-3.5", "mistral-medium-latest", 4, 256000, 30);
             registerMistralModel("mistral/devstral", "devstral-2512", 5, 131072, 30);
-            registerMistralModel("mistral/small", "mistral-small-latest", 6, 32768, 30);
-            registerMistralModel("mistral/large", "mistral-large-2512", 7, 131072, 30);
-            registerMistralModel("mistral/ministral-14b", "ministral-3-14b-2512", 8, 131072, 30);
-            registerMistralModel("mistral/ministral-8b", "ministral-3-8b-2512", 9, 131072, 30);
-            registerMistralModel("mistral/ministral-3b", "ministral-3-3b-2512", 10, 131072, 30);
+            registerMistralModel("mistral/small-4", "mistral-small-latest", 6, 256000, 30);
+            registerMistralModel("mistral/large-3", "mistral-large-latest", 7, 131072, 30);
+            registerMistralModel("mistral/ministral-14b", "ministral-14b-2512", 8, 256000, 30);
+            registerMistralModel("mistral/ministral-8b", "ministral-8b-2512", 9, 256000, 30);
+            registerMistralModel("mistral/ministral-3b", "ministral-3b-2512", 10, 256000, 30);
         }
 
         // ─── Gemini: 1 model ────────────────────────────────────────
