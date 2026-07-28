@@ -284,27 +284,32 @@ public class LocalBrain {
     }
 
     /**
-     * Pre-warm Ollama by sending a tiny prompt.
-     * This loads the model into memory so subsequent calls are fast (~1-2s instead of 30-60s).
+     * Pre-warm Ollama by sending a tiny prompt in a background thread.
+     * Does NOT block startup. Model loads in background.
      */
     private void preWarmOllama() {
-        try {
-            log.info("  Pre-warming Ollama (loading model into RAM)...");
-            ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:1b", "hi");
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            // Drain output
-            process.getInputStream().readAllBytes();
-            boolean done = process.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
-            if (done && process.exitValue() == 0) {
-                log.info("  ✓ Ollama pre-warmed (model loaded in RAM)");
-            } else {
-                log.warn("  Pre-warm slow or failed. First Gemma call may be slow.");
-                if (!done) process.destroyForcibly();
+        Thread warmupThread = new Thread(() -> {
+            try {
+                log.info("  Pre-warming Ollama in background...");
+                ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:1b", "hi");
+                pb.redirectErrorStream(true);
+                Process process = pb.start();
+                process.getInputStream().readAllBytes();
+                boolean done = process.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
+                if (done && process.exitValue() == 0) {
+                    log.info("  ✓ Ollama pre-warmed (model loaded)");
+                } else {
+                    log.warn("  Ollama pre-warm took too long. Disabling Gemma for this session.");
+                    if (!done) process.destroyForcibly();
+                    gemmaAvailable = false;
+                }
+            } catch (Exception e) {
+                log.warn("  Pre-warm failed: {}. Disabling Gemma.", e.getMessage());
+                gemmaAvailable = false;
             }
-        } catch (Exception e) {
-            log.warn("  Pre-warm failed: {}", e.getMessage());
-        }
+        });
+        warmupThread.setDaemon(true);
+        warmupThread.start();
     }
 
     private String runGemmaExtraction(String userPrompt) {
