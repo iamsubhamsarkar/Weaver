@@ -318,9 +318,60 @@ public class WeaverAgent {
                 onThinkingStop.run();
                 log.error("Provider {} FAILED: {}", currentProvider, e.getMessage());
                 log.debug("Full error:", e);
-                failedThisRequest.add(currentProvider);
+
+                String errorMsg = e.getMessage() != null ? e.getMessage() : "";
                 providerRegistry.classifyError(currentProvider, e);
-                outputCallback.accept(String.format("  ⚠️ %s failed, switching...", currentProvider));
+
+                // ─── Smart Retry Strategy ─────────────────────────────────
+                // Layer 1: If TPM (per-minute) rate limit with short wait → wait and retry SAME provider
+                long retryMs = parseRetryDelay(errorMsg);
+                int retrySeconds = (int) (retryMs / 1000);
+                boolean isPerMinuteLimit = errorMsg.contains("tokens per minute") || errorMsg.contains("TPM");
+                boolean isPerDayLimit = errorMsg.contains("tokens per day") || errorMsg.contains("TPD");
+
+                if (isPerMinuteLimit && retrySeconds > 0 && retrySeconds <= 30) {
+                    log.info("TPM limit hit. Waiting {}s and retrying same provider: {}", retrySeconds, currentProvider);
+                    outputCallback.accept(String.format("  ⏳ Rate limited. Waiting %ds...", retrySeconds));
+                    try { Thread.sleep(retryMs + 1000); } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
+                    // Don't add to failedThisRequest — retry same provider
+                    continue;
+                }
+
+                // Layer 2: If per-day limit → mark ALL models from same provider account as failed
+                if (isPerDayLimit) {
+                    String providerPrefix = currentProvider.contains("/")
+                            ? currentProvider.substring(0, currentProvider.indexOf("/"))
+                            : currentProvider;
+                    log.info("Daily limit hit on {}. Marking all {} models as failed for this request.", currentProvider, providerPrefix);
+                    for (ProviderRegistry.ProviderEntry p : providerRegistry.getAllProviders()) {
+                        if (p.name().startsWith(providerPrefix + "/")) {
+                            failedThisRequest.add(p.name());
+                        }
+                    }
+                    outputCallback.accept(String.format("  ⚠️ %s daily limit hit. Skipping all %s models.", currentProvider, providerPrefix));
+                } else {
+                    failedThisRequest.add(currentProvider);
+                    outputCallback.accept(String.format("  ⚠️ %s failed, switching...", currentProvider));
+                }
+
+                // Layer 3: Circuit breaker — if 2+ models from same provider failed, skip remaining
+                String providerGroup = currentProvider.contains("/")
+                        ? currentProvider.substring(0, currentProvider.indexOf("/"))
+                        : currentProvider;
+                long failedFromSameGroup = failedThisRequest.stream()
+                        .filter(name -> name.startsWith(providerGroup + "/"))
+                        .count();
+                if (failedFromSameGroup >= 2) {
+                    // Mark all remaining models from this provider as failed
+                    for (ProviderRegistry.ProviderEntry p : providerRegistry.getAllProviders()) {
+                        if (p.name().startsWith(providerGroup + "/") && !failedThisRequest.contains(p.name())) {
+                            failedThisRequest.add(p.name());
+                            log.info("Circuit breaker: skipping {} (2+ failures from {})", p.name(), providerGroup);
+                        }
+                    }
+                }
 
                 ProviderRegistry.ProviderEntry next = providerRegistry.getAvailableProvider(failedThisRequest);
                 if (next == null) { finalResponse = "ERROR: All providers exhausted."; break; }
