@@ -87,11 +87,11 @@ echo -e "${CYAN}[1/7] Checking Java...${RESET}"
 if command -v java &> /dev/null; then
     echo -e "  ${GREEN}✓${RESET} Java found"
 else
-    echo -e "  ${YELLOW}⚙ Installing Java 21...${RESET}"
+    echo -e "  ${YELLOW}⚙ Installing Java 21 (this may take a minute)...${RESET}"
     if $IS_LINUX; then
-        sudo apt update -qq && sudo apt install -y -qq openjdk-21-jdk > /dev/null 2>&1
+        sudo apt update -qq && sudo apt install -y openjdk-21-jdk 2>&1 | grep -E "^(Get|Unpacking|Setting)" | tail -5
     elif $IS_MAC; then
-        brew install openjdk@21 2>/dev/null || { echo -e "${RED}  Install Java: brew install openjdk@21${RESET}"; exit 1; }
+        brew install openjdk@21 2>&1 | tail -3 || { echo -e "${RED}  Install Java: brew install openjdk@21${RESET}"; exit 1; }
     fi
     echo -e "  ${GREEN}✓${RESET} Java installed"
 fi
@@ -103,9 +103,9 @@ if command -v mvn &> /dev/null; then
 else
     echo -e "  ${YELLOW}⚙ Installing Maven...${RESET}"
     if $IS_LINUX; then
-        sudo apt install -y -qq maven > /dev/null 2>&1
+        sudo apt install -y maven 2>&1 | grep -E "^(Get|Unpacking|Setting)" | tail -3
     elif $IS_MAC; then
-        brew install maven 2>/dev/null || { echo -e "${RED}  Install Maven: brew install maven${RESET}"; exit 1; }
+        brew install maven 2>&1 | tail -3 || { echo -e "${RED}  Install Maven: brew install maven${RESET}"; exit 1; }
     fi
     echo -e "  ${GREEN}✓${RESET} Maven installed"
 fi
@@ -115,7 +115,7 @@ echo -e "${CYAN}[3/7] Setting up Python environment...${RESET}"
 if ! command -v python3 &> /dev/null; then
     echo -e "  ${YELLOW}⚙ Installing Python3...${RESET}"
     if $IS_LINUX; then
-        sudo apt install -y -qq python3 python3-venv python3-full > /dev/null 2>&1
+        sudo apt install -y python3 python3-venv python3-full 2>&1 | grep -E "^(Get|Unpacking|Setting)" | head -5
     elif $IS_MAC; then
         brew install python3 2>/dev/null
     fi
@@ -123,11 +123,12 @@ fi
 
 # Ensure venv module
 if $IS_LINUX; then
-    python3 -m venv --help > /dev/null 2>&1 || sudo apt install -y -qq python3-venv python3-full > /dev/null 2>&1
+    python3 -m venv --help > /dev/null 2>&1 || sudo apt install -y python3-venv python3-full 2>&1 | tail -3
 fi
 
 # Create venv
 if [ ! -d "$VENV_DIR" ]; then
+    echo -e "  ${DIM}Creating virtual environment...${RESET}"
     python3 -m venv "$VENV_DIR"
 fi
 echo -e "  ${GREEN}✓${RESET} Python environment ready"
@@ -139,25 +140,39 @@ GEMMA_PATH="$MODELS_DIR/gemma-3-270m-it"
 if [ -d "$GEMMA_PATH" ] && [ "$(ls -A $GEMMA_PATH 2>/dev/null)" ]; then
     echo -e "  ${GREEN}✓${RESET} Gemma 270M already installed"
 else
-    echo -e "  ${DIM}  Downloading model (one-time, ~540MB)...${RESET}"
+    echo -e "  ${DIM}Downloading dependencies + model (~2.3GB total)...${RESET}"
+    echo -e "  ${DIM}This takes 5-15 min on first install. Progress shown below.${RESET}"
+    echo ""
     mkdir -p "$MODELS_DIR"
 
     source "$VENV_DIR/bin/activate"
-    pip install -q --upgrade pip 2>/dev/null
-    pip install -q transformers torch --index-url https://download.pytorch.org/whl/cpu 2>/dev/null
+
+    echo -e "  ${DIM}[4a] Installing PyTorch CPU (~1.8GB)...${RESET}"
+    pip install --upgrade pip 2>&1 | tail -1
+    pip install transformers torch --index-url https://download.pytorch.org/whl/cpu 2>&1 | grep -E "Downloading|Installing|Successfully" | while read line; do
+        echo -e "       ${DIM}$line${RESET}"
+    done
+
+    echo ""
+    echo -e "  ${DIM}[4b] Downloading Gemma 3 270M model (~540MB)...${RESET}"
 
     python3 << 'PYEOF'
 from transformers import AutoTokenizer, AutoModelForCausalLM
-import os
+import os, sys
+
 model_id = 'google/gemma-3-270m-it'
 save_path = os.path.expanduser('~/.weaver/models/gemma-3-270m-it')
 os.makedirs(save_path, exist_ok=True)
-print('    Downloading tokenizer...')
+
+print('       Downloading tokenizer...', flush=True)
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 tokenizer.save_pretrained(save_path)
-print('    Downloading model weights...')
+print('       ✓ Tokenizer done', flush=True)
+
+print('       Downloading model weights (~540MB)...', flush=True)
 model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype='auto')
 model.save_pretrained(save_path)
+print('       ✓ Model weights done', flush=True)
 PYEOF
 
     # Create inference runner
@@ -190,7 +205,10 @@ fi
 # ─── Step 5: Build Weaver ─────────────────────────────────
 echo -e "${CYAN}[5/7] Building Weaver...${RESET}"
 cd "$SCRIPT_DIR"
-if mvn package -DskipTests -q 2>&1 | tail -3; then
+echo -e "  ${DIM}Downloading dependencies + compiling (first time takes 2-3 min)...${RESET}"
+if mvn package -DskipTests 2>&1 | grep -E "Downloading|Downloaded|BUILD" | while read line; do
+    echo -e "       ${DIM}$line${RESET}"
+done; then
     if [ -f "$SCRIPT_DIR/target/weaver-agent-1.0.0-SNAPSHOT.jar" ]; then
         echo -e "  ${GREEN}✓${RESET} Build successful"
     else
