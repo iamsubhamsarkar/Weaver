@@ -67,7 +67,7 @@ public class ProviderRegistry {
     private final Map<String, Instant> lastCallTime = new ConcurrentHashMap<>();
     private final Map<String, AtomicInteger> callsThisMinute = new ConcurrentHashMap<>();
     private final Map<String, Instant> minuteWindowStart = new ConcurrentHashMap<>();
-    private final Set<String> permanentlyDisabled = ConcurrentHashMap.newKeySet();
+    private final Set<String> permanentlyDisabled = ConcurrentHashMap.newKeySet(); // kept empty, never used
 
     // Round-robin index
     private int roundRobinIndex = 0;
@@ -256,41 +256,32 @@ public class ProviderRegistry {
     }
 
     /**
-     * Classify an error and decide if this provider should be permanently disabled.
+     * Classify an error. Never permanently disable a provider —
+     * all failures are treated as temporary (rate limits reset, networks recover).
      */
     public ErrorType classifyError(String providerName, Exception e) {
         String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
 
-        // Rate limit errors (temporary — try again later)
+        // Rate limit errors
         if (msg.contains("429") || msg.contains("rate_limit") || msg.contains("rate limit")
                 || msg.contains("quota") || msg.contains("resource_exhausted")
                 || msg.contains("too many requests")) {
             return ErrorType.RATE_LIMITED;
         }
 
-        // Model capability failures (permanent — this provider can't handle tool calling)
-        if (msg.contains("tool") && (msg.contains("not supported") || msg.contains("invalid"))
-                || msg.contains("function calling is not supported")
-                || msg.contains("unrecognized request argument: tools")) {
-            log.warn("Provider {} permanently disabled: doesn't support tool calling", providerName);
-            permanentlyDisabled.add(providerName);
-            return ErrorType.CAPABILITY_FAILURE;
-        }
-
-        // Timeout or network issues (temporary)
+        // Timeout or network issues
         if (msg.contains("timeout") || msg.contains("timed out") || msg.contains("connection")) {
             return ErrorType.NETWORK_ERROR;
         }
 
-        // Unknown error — treat as temporary
+        // Everything else — treat as temporary, never permanently disable
         return ErrorType.UNKNOWN;
     }
 
     public enum ErrorType {
-        RATE_LIMITED,       // 429 — try another provider, come back later
-        CAPABILITY_FAILURE, // Model can't do tool calling — permanently skip
-        NETWORK_ERROR,      // Timeout — retry after delay
-        UNKNOWN             // Treat as temporary
+        RATE_LIMITED,
+        NETWORK_ERROR,
+        UNKNOWN
     }
 
     public void recordSuccess(String providerName) {

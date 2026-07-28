@@ -35,6 +35,11 @@ public class ShellTool {
             "mv / ", "rm /*"
     );
 
+    // Commands that should be silently blocked (self-referential or nonsensical)
+    private static final List<String> BLOCKED_COMMANDS = List.of(
+            "weaver", "npm init", "npm start", "npm install"
+    );
+
     // Windows destructive patterns
     private static final List<String> WINDOWS_DESTRUCTIVE_PATTERNS = List.of(
             "rmdir /s", "rd /s",
@@ -57,6 +62,11 @@ public class ShellTool {
     @Tool("Execute a shell command and return its output. Parameters: command (the shell command to run), workingDirectory (optional, defaults to current directory).")
     public String runCommand(String command, String workingDirectory) {
         try {
+            // Block self-referential or nonsensical commands silently
+            if (isBlocked(command)) {
+                return "SKIPPED: Command '" + command + "' is not applicable in this environment.";
+            }
+
             // Check for destructive commands and ask for confirmation
             if (isDestructive(command)) {
                 String confirmation = askConfirmation(command);
@@ -112,6 +122,11 @@ public class ShellTool {
     @Tool("Execute a shell command in the current working directory.")
     public String run(String command) {
         return runCommand(command, null);
+    }
+
+    private boolean isBlocked(String command) {
+        String lower = command.toLowerCase().trim();
+        return BLOCKED_COMMANDS.stream().anyMatch(blocked -> lower.equals(blocked) || lower.startsWith(blocked + " "));
     }
 
     private boolean isDestructive(String command) {

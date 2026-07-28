@@ -76,9 +76,16 @@ public class SkillLibrary {
 
     /**
      * Store a successful plan as a new skill.
+     * Only stores if the plan meets quality criteria.
      */
     public void storeSkill(String userPrompt, String planJson) {
         try {
+            // Quality gate: don't store plans with tiny file outputs or blocked commands
+            if (!isQualityPlan(planJson)) {
+                log.info("Skill NOT stored: failed quality check");
+                return;
+            }
+
             Files.createDirectories(SKILLS_DIR);
 
             Embedding embedding = embeddingModel.embed(userPrompt).content();
@@ -160,5 +167,37 @@ public class SkillLibrary {
             normB += b[i] * b[i];
         }
         return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+    }
+
+    /**
+     * Quality check: reject plans that are clearly bad.
+     * - Plans with writeFile that wrote less than 500 chars (garbage output)
+     * - Plans containing npm/yarn commands (hallucinated dependencies)
+     * - Plans with only readFile and no output action
+     */
+    private boolean isQualityPlan(String planJson) {
+        if (planJson == null) return false;
+        String lower = planJson.toLowerCase();
+
+        // Reject plans with npm/yarn (usually hallucinated)
+        if (lower.contains("npm ") || lower.contains("yarn ")) return false;
+
+        // Reject plans where writeFile content is too short (< 500 chars)
+        // This catches the 231-char garbage files
+        if (lower.contains("writefile")) {
+            // Count total content length across all writeFile steps
+            int contentLength = 0;
+            String[] parts = planJson.split("\"content\"");
+            for (int i = 1; i < parts.length; i++) {
+                // Rough estimate: count chars until next "tool" or end
+                int end = parts[i].indexOf("\"tool\"");
+                if (end < 0) end = parts[i].length();
+                contentLength += Math.min(end, parts[i].length());
+            }
+            // If we have writeFile but total content is tiny, it's garbage
+            if (contentLength < 500) return false;
+        }
+
+        return true;
     }
 }
