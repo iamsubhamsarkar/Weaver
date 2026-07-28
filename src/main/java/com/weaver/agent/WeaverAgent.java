@@ -119,18 +119,27 @@ public class WeaverAgent {
         // ─── Layer 1: Semantic Cache (0 API calls) ───
         Optional<String> cached = experienceLibrary.lookupCachedSolution(userPrompt);
         if (cached.isPresent()) {
-            outputCallback.accept("\n🎯 Cache hit — instant response.");
-            streamResponse(cached.get());
-            return cached.get();
+            // Gemma gate: validate cache is actually relevant
+            if (localBrain.validateCacheRelevance(userPrompt, cached.get())) {
+                outputCallback.accept("\n🎯 Cache hit — instant response.");
+                streamResponse(cached.get());
+                return cached.get();
+            } else {
+                outputCallback.accept("\n  🧠 Cache hit rejected by validation — continuing...");
+            }
         }
 
         // ─── Layer 2: Skill Library Replay (0 API calls) ───
         String skillPlan = skillLibrary.findMatchingSkill(userPrompt);
         if (skillPlan != null) {
-            outputCallback.accept("\n📚 Skill match — replaying...");
-            String skillResult = replaySkill(skillPlan);
-            if (skillResult != null) return skillResult;
-            // Fell through — skill replay failed, continue to planning
+            // Gemma gate: validate skill fits this task
+            if (localBrain.validateSkillFit(userPrompt, skillPlan)) {
+                outputCallback.accept("\n📚 Skill match — replaying...");
+                String skillResult = replaySkill(skillPlan);
+                if (skillResult != null) return skillResult;
+            } else {
+                outputCallback.accept("\n  🧠 Skill rejected by validation — planning fresh...");
+            }
         }
 
         // ─── Layer 3: Classify task + Select tools ───
@@ -141,6 +150,10 @@ public class WeaverAgent {
         String preSearchContext = null;
         if (taskType == LocalBrain.TaskType.CODE_GENERATION) {
             preSearchContext = performPreSearch(userPrompt);
+            // Gemma gate: validate search results are relevant
+            if (preSearchContext != null && !localBrain.validateSearchRelevance(userPrompt, preSearchContext)) {
+                preSearchContext = null; // Discard irrelevant results
+            }
         }
 
         // ─── Layer 5: Plan-then-Execute (1 API call) ───
@@ -164,11 +177,16 @@ public class WeaverAgent {
             onThinkingStop.run();
 
             if (planResult != null && planResult.success()) {
-                providerRegistry.recordSuccess(provider.name());
-                skillLibrary.storeSkill(userPrompt, planResult.rawPlan());
-                experienceLibrary.storeSolution(userPrompt, planResult.response());
-                streamResponse(planResult.response());
-                return planResult.response();
+                // Gemma gate: validate the plan made sense
+                if (localBrain.validatePlanJson(userPrompt, planResult.rawPlan())) {
+                    providerRegistry.recordSuccess(provider.name());
+                    skillLibrary.storeSkill(userPrompt, planResult.rawPlan());
+                    experienceLibrary.storeSolution(userPrompt, planResult.response());
+                    streamResponse(planResult.response());
+                    return planResult.response();
+                } else {
+                    outputCallback.accept("  🧠 Plan rejected by validation — using ReAct...");
+                }
             }
         } catch (Exception e) {
             onThinkingStop.run();
@@ -253,7 +271,10 @@ public class WeaverAgent {
 
         memoryStore.updateMessages(sessionId, messages);
         if (!finalResponse.startsWith("ERROR") && !finalResponse.startsWith("Max steps")) {
-            experienceLibrary.storeSolution(userPrompt, finalResponse);
+            // Gemma gate: validate output before caching
+            if (localBrain.validateOutput(userPrompt, "response", finalResponse)) {
+                experienceLibrary.storeSolution(userPrompt, finalResponse);
+            }
         }
         streamResponse(finalResponse);
         return finalResponse;

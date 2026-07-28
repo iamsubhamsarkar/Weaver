@@ -341,6 +341,118 @@ public class LocalBrain {
         }
     }
 
+    // ─── Validation Gates (Gemma-powered when available) ────────
+
+    /**
+     * Validate whether a cached solution is relevant to the current prompt.
+     * Returns true if the cache should be used, false if it should be skipped.
+     * If Gemma is unavailable, always returns true (don't block).
+     */
+    public boolean validateCacheRelevance(String userPrompt, String cachedSolution) {
+        if (!gemmaAvailable) return true; // No Gemma = don't block, use cache as-is
+
+        String truncatedSolution = cachedSolution.length() > 300
+                ? cachedSolution.substring(0, 300) : cachedSolution;
+
+        String result = runGemma(
+            "Does this cached solution match the user's request? "
+            + "Answer ONLY 'YES' or 'NO'.\n"
+            + "User request: " + userPrompt + "\n"
+            + "Cached solution (preview): " + truncatedSolution);
+
+        if (result == null) return true; // Gemma failed = don't block
+        return !result.trim().toUpperCase().startsWith("NO");
+    }
+
+    /**
+     * Validate whether a skill plan fits the current task.
+     * Returns true if the skill should be replayed, false if it should be skipped.
+     */
+    public boolean validateSkillFit(String userPrompt, String skillDescription) {
+        if (!gemmaAvailable) return true;
+
+        String result = runGemma(
+            "Can this stored skill be reused for the new task? "
+            + "Answer ONLY 'YES' or 'NO'.\n"
+            + "Stored skill was for: " + skillDescription + "\n"
+            + "New task: " + userPrompt);
+
+        if (result == null) return true;
+        return !result.trim().toUpperCase().startsWith("NO");
+    }
+
+    /**
+     * Validate whether web search results are relevant to the task.
+     * Returns true if results should be injected as context, false if they should be discarded.
+     */
+    public boolean validateSearchRelevance(String userPrompt, String searchResults) {
+        if (!gemmaAvailable) return true;
+
+        String truncatedResults = searchResults.length() > 300
+                ? searchResults.substring(0, 300) : searchResults;
+
+        String result = runGemma(
+            "Are these search results relevant to the user's coding task? "
+            + "Answer ONLY 'YES' or 'NO'.\n"
+            + "Task: " + userPrompt + "\n"
+            + "Search results (preview): " + truncatedResults);
+
+        if (result == null) return true;
+        return !result.trim().toUpperCase().startsWith("NO");
+    }
+
+    /**
+     * Validate whether a plan JSON is structurally valid and makes sense.
+     * Returns true if the plan should be executed, false if it should be rejected.
+     */
+    public boolean validatePlanJson(String userPrompt, String planJson) {
+        if (!gemmaAvailable) {
+            // Without Gemma, at least check basic JSON structure
+            return planJson != null && planJson.contains("\"steps\"") && planJson.contains("\"tool\"");
+        }
+
+        String truncatedPlan = planJson.length() > 500
+                ? planJson.substring(0, 500) : planJson;
+
+        String result = runGemma(
+            "Is this execution plan reasonable for the task? "
+            + "Check: does it use the right tools? Are the steps logical? "
+            + "Answer ONLY 'YES' or 'NO'.\n"
+            + "Task: " + userPrompt + "\n"
+            + "Plan: " + truncatedPlan);
+
+        if (result == null) {
+            // Fallback: basic structure check
+            return planJson.contains("\"steps\"") && planJson.contains("\"tool\"");
+        }
+        return !result.trim().toUpperCase().startsWith("NO");
+    }
+
+    /**
+     * Validate whether the output of a task makes sense (post-execution check).
+     * Returns true if the output should be cached/stored, false if it seems wrong.
+     */
+    public boolean validateOutput(String userPrompt, String toolName, String result) {
+        if (!gemmaAvailable) return true;
+
+        // Only validate significant outputs (writeFile, run)
+        if (toolName == null) return true;
+        if (!toolName.equals("writeFile") && !toolName.equals("run")) return true;
+
+        String truncatedResult = result.length() > 200
+                ? result.substring(0, 200) : result;
+
+        String gemmaResult = runGemma(
+            "Did this tool execution succeed for the task? "
+            + "Answer ONLY 'YES' or 'NO'.\n"
+            + "Task: " + userPrompt + "\n"
+            + "Tool: " + toolName + "\n"
+            + "Result: " + truncatedResult);
+
+        if (gemmaResult == null) return true;
+        return !gemmaResult.trim().toUpperCase().startsWith("NO");
+    }
+
     // ─── Utility ─────────────────────────────────────────────────
 
     private void initClassificationEmbeddings() {
