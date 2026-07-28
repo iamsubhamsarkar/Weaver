@@ -107,7 +107,25 @@ public class PlanExecutor {
                 outputCallback.accept("  ← " + truncate(result, 100));
             }
 
-            // 4. All steps succeeded — return the plan's final message
+            // 4. Check if plan actually produced output (not just reads)
+            boolean hasOutputAction = false;
+            for (int i = 0; i < steps.size(); i++) {
+                JsonNode step = steps.get(i);
+                String tn = step.has("tool") ? step.get("tool").asText() : "";
+                if (tn.equals("writeFile") || tn.equals("editFile") || tn.equals("run") || tn.equals("runCommand")) {
+                    hasOutputAction = true;
+                    break;
+                }
+            }
+
+            if (!hasOutputAction) {
+                // Plan only read files — it didn't actually DO anything
+                // Fall back to ReAct which can reason about the file contents
+                outputCallback.accept("  ⚠️ Plan only read files without acting — need ReAct for this task.");
+                return null;
+            }
+
+            // 5. All steps succeeded with actual output
             return new PlanResult(true, finalMessage, stepLogs, planJson);
 
         } catch (Exception e) {
@@ -150,6 +168,8 @@ public class PlanExecutor {
             - "final_message" should be a 1-line summary of what was accomplished.
             - You can request multiple tools to call in parallel by using the same step number.
             - If the task is complex and you're unsure of exact content, still attempt a plan.
+            - CRITICAL: If the user says "read X and do Y" or "follow X", the plan MUST include BOTH reading AND the action. Reading a file alone is NEVER a complete plan unless the user ONLY asked to read.
+            - CRITICAL: If the user references a file (tasklist, spec, requirements), read it first, then include steps to fulfill what it describes.
 
             RESPONSE FORMAT (strict JSON only):
             {"steps": [{"tool": "toolName", "args": {...}}, ...], "final_message": "Done. Created X."}

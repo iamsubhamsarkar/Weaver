@@ -6,20 +6,36 @@ import java.util.*;
 
 /**
  * Selects only the tools relevant to the current task type.
- * Reduces input tokens by ~1500 per API call by not sending all 11 tool definitions.
+ * Reduces input tokens by not sending all 11 tool definitions.
+ *
+ * If the prompt contains multiple intents (e.g., "read X and build Y"),
+ * returns all tools to avoid blocking needed actions.
  */
 public class ToolSelector {
 
+    // Action words that indicate the user wants to CREATE something
+    private static final Set<String> ACTION_WORDS = Set.of(
+        "build", "create", "make", "write", "implement", "generate",
+        "add", "develop", "construct", "design", "setup", "set up",
+        "perform", "do", "execute", "follow"
+    );
+
     /**
      * Select relevant tools based on task classification.
-     * Returns a subset of tools that are likely needed for this task type.
+     * Detects multi-intent prompts and returns all tools when needed.
      */
     public static List<ToolSpecification> selectTools(
-            LocalBrain.TaskType taskType, List<ToolSpecification> allTools) {
+            LocalBrain.TaskType taskType, List<ToolSpecification> allTools, String userPrompt) {
+
+        // Multi-intent detection: if prompt has action words regardless of classification,
+        // give the LLM all tools so it can both read AND create
+        if (taskType == LocalBrain.TaskType.FILE_READ || taskType == LocalBrain.TaskType.EXPLAIN) {
+            if (containsActionIntent(userPrompt)) {
+                return allTools; // User wants to read AND do something — give all tools
+            }
+        }
 
         Set<String> relevantNames = getRelevantToolNames(taskType);
-
-        // If classification is UNKNOWN or returned null, use all tools
         if (relevantNames == null) return allTools;
 
         List<ToolSpecification> selected = new ArrayList<>();
@@ -29,16 +45,32 @@ public class ToolSelector {
             }
         }
 
-        // Always return at least the core tools if classification is uncertain
         if (selected.isEmpty()) return allTools;
         return selected;
+    }
+
+    /**
+     * Overload for backward compatibility (without prompt).
+     */
+    public static List<ToolSpecification> selectTools(
+            LocalBrain.TaskType taskType, List<ToolSpecification> allTools) {
+        return selectTools(taskType, allTools, "");
+    }
+
+    private static boolean containsActionIntent(String prompt) {
+        if (prompt == null) return false;
+        String lower = prompt.toLowerCase();
+        for (String word : ACTION_WORDS) {
+            if (lower.contains(word)) return true;
+        }
+        return false;
     }
 
     private static Set<String> getRelevantToolNames(LocalBrain.TaskType taskType) {
         return switch (taskType) {
             case CODE_GENERATION -> Set.of(
-                "writeFile", "editFile", "readFile", "listDirectory",
-                "webSearch", "run"
+                "writeFile", "editFile", "readFile", "readFileLines",
+                "listDirectory", "webSearch", "run", "searchFiles"
             );
             case FILE_READ -> Set.of(
                 "readFile", "readFileLines", "listDirectory", "searchFiles"

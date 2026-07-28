@@ -144,7 +144,7 @@ public class WeaverAgent {
 
         // ─── Layer 3: Classify task + Select tools ───
         LocalBrain.TaskType taskType = localBrain.classifyTask(userPrompt);
-        List<ToolSpecification> selectedTools = ToolSelector.selectTools(taskType, toolSpecs);
+        List<ToolSpecification> selectedTools = ToolSelector.selectTools(taskType, toolSpecs, userPrompt);
 
         // ─── Layer 4: Pre-search for code gen tasks ───
         String preSearchContext = null;
