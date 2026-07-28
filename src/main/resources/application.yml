@@ -26,23 +26,18 @@ weaver:
   providers:
     groq:
       api-key: ${GROQ_API_KEY:}
-      model: llama-3-groq-70b-8192-tool-use-preview
       enabled: true
     gemini:
       api-key: ${GEMINI_API_KEY:}
-      model: gemini-2.0-flash
       enabled: true
     cerebras:
       api-key: ${CEREBRAS_API_KEY:}
-      model: gemma-4-31b
       enabled: true
     mistral:
       api-key: ${MISTRAL_API_KEY:}
-      model: mistral-small-latest
       enabled: true
     openrouter:
       api-key: ${OPENROUTER_API_KEY:}
-      model: nvidia/nemotron-3-super-120b-a12b:free
       enabled: true
 
 # Logging - all logs go to ~/.weaver/logs/weaver.log (see logback-spring.xml)

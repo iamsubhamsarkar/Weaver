@@ -29,13 +29,13 @@ public class LocalBrain {
     private final EmbeddingModel embeddingModel;
     private boolean gemmaAvailable = false;
 
-    // Pre-computed embeddings for task classification
-    private Embedding codeGenEmbedding;
-    private Embedding fileReadEmbedding;
-    private Embedding bugFixEmbedding;
-    private Embedding explainEmbedding;
-    private Embedding shellCmdEmbedding;
-    private Embedding searchEmbedding;
+    // Pre-computed embeddings for task classification (multiple prototypes per category)
+    private List<Embedding> codeGenEmbeddings;
+    private List<Embedding> fileReadEmbeddings;
+    private List<Embedding> bugFixEmbeddings;
+    private List<Embedding> explainEmbeddings;
+    private List<Embedding> shellCmdEmbeddings;
+    private List<Embedding> searchEmbeddings;
 
     public LocalBrain(EmbeddingModel embeddingModel) {
         this.embeddingModel = embeddingModel;
@@ -57,19 +57,22 @@ public class LocalBrain {
 
     /**
      * Classify the user's task using semantic similarity.
-     * Compares the prompt's embedding against pre-computed category embeddings.
+     * Compares the prompt's embedding against multiple prototype embeddings per category.
+     * Uses the best match across all prototypes and a low threshold (0.15) since
+     * AllMiniLmL6V2 produces scores in a narrow band for sentence-to-sentence comparisons.
      */
     public TaskType classifyTask(String userPrompt) {
         try {
             Embedding promptEmbedding = embeddingModel.embed(userPrompt).content();
 
+            // Score against all prototypes per category, take the max per category
             Map<TaskType, Double> scores = new LinkedHashMap<>();
-            scores.put(TaskType.CODE_GENERATION, cosineSimilarity(promptEmbedding, codeGenEmbedding));
-            scores.put(TaskType.FILE_READ, cosineSimilarity(promptEmbedding, fileReadEmbedding));
-            scores.put(TaskType.BUG_FIX, cosineSimilarity(promptEmbedding, bugFixEmbedding));
-            scores.put(TaskType.EXPLAIN, cosineSimilarity(promptEmbedding, explainEmbedding));
-            scores.put(TaskType.SHELL_COMMAND, cosineSimilarity(promptEmbedding, shellCmdEmbedding));
-            scores.put(TaskType.SEARCH, cosineSimilarity(promptEmbedding, searchEmbedding));
+            scores.put(TaskType.CODE_GENERATION, maxSimilarity(promptEmbedding, codeGenEmbeddings));
+            scores.put(TaskType.FILE_READ, maxSimilarity(promptEmbedding, fileReadEmbeddings));
+            scores.put(TaskType.BUG_FIX, maxSimilarity(promptEmbedding, bugFixEmbeddings));
+            scores.put(TaskType.EXPLAIN, maxSimilarity(promptEmbedding, explainEmbeddings));
+            scores.put(TaskType.SHELL_COMMAND, maxSimilarity(promptEmbedding, shellCmdEmbeddings));
+            scores.put(TaskType.SEARCH, maxSimilarity(promptEmbedding, searchEmbeddings));
 
             TaskType best = TaskType.UNKNOWN;
             double bestScore = 0.0;
@@ -80,14 +83,24 @@ public class LocalBrain {
                 }
             }
 
+            // Minimum threshold of 0.15 — below that, it's genuinely unclassifiable
             log.info("  [LocalBrain] Classification scores: {}", scores);
-            log.info("  [LocalBrain] Best={} (score={}), threshold=0.3 → result={}", 
-                    best, String.format("%.3f", bestScore), bestScore > 0.3 ? best : "UNKNOWN");
-            return bestScore > 0.3 ? best : TaskType.UNKNOWN;
+            log.info("  [LocalBrain] Best={} (score={}), threshold=0.15 → result={}",
+                    best, String.format("%.3f", bestScore), bestScore > 0.15 ? best : "UNKNOWN");
+            return bestScore > 0.15 ? best : TaskType.UNKNOWN;
         } catch (Exception e) {
             log.warn("  [LocalBrain] Classification FAILED: {}", e.getMessage());
             return TaskType.UNKNOWN;
         }
+    }
+
+    private double maxSimilarity(Embedding prompt, List<Embedding> prototypes) {
+        double max = 0.0;
+        for (Embedding proto : prototypes) {
+            double sim = cosineSimilarity(prompt, proto);
+            if (sim > max) max = sim;
+        }
+        return max;
     }
 
     // ─── Search Query Extraction ─────────────────────────────────
@@ -536,24 +549,75 @@ public class LocalBrain {
 
     private void initClassificationEmbeddings() {
         try {
-            // Pre-compute embeddings for each task category
-            codeGenEmbedding = embeddingModel.embed(
-                "create build write implement make generate new application page component function class").content();
-            fileReadEmbedding = embeddingModel.embed(
-                "read show display list open view contents file directory what is in").content();
-            bugFixEmbedding = embeddingModel.embed(
-                "fix bug error debug repair broken not working failing crash exception").content();
-            explainEmbedding = embeddingModel.embed(
-                "explain describe what does how does why understand meaning purpose").content();
-            shellCmdEmbedding = embeddingModel.embed(
-                "run execute build compile test deploy start stop install command terminal").content();
-            searchEmbedding = embeddingModel.embed(
-                "search find look up how to documentation reference tutorial guide").content();
+            // Pre-compute multiple prototype embeddings per category using realistic prompts.
+            // Multiple examples per category improves coverage of how users phrase requests.
 
-            log.info("✓ Task classification embeddings initialized");
+            codeGenEmbeddings = embedAll(
+                "Create a login page with HTML and CSS",
+                "Build a REST API with Spring Boot",
+                "Write a Python script that reads a CSV file",
+                "Make me a todo app in React",
+                "Generate a function that sorts a list",
+                "Implement user authentication with JWT"
+            );
+
+            fileReadEmbeddings = embedAll(
+                "Read the file main.py",
+                "Show me the contents of package.json",
+                "What is in the config directory",
+                "Open and display the README",
+                "List all files in the src folder",
+                "Read lines 10 to 50 of server.js"
+            );
+
+            bugFixEmbeddings = embedAll(
+                "Fix the NullPointerException in UserService",
+                "Debug why the tests are failing",
+                "There is an error when I click submit",
+                "The application crashes on startup",
+                "This function returns wrong results",
+                "Fix the broken CSS layout on mobile"
+            );
+
+            explainEmbeddings = embedAll(
+                "Explain this code to me",
+                "What does this function do",
+                "How does the authentication flow work",
+                "Why is this using a HashMap instead of a TreeMap",
+                "Can you explain what async await means",
+                "What is the purpose of this middleware"
+            );
+
+            shellCmdEmbeddings = embedAll(
+                "Run the tests",
+                "Build the project",
+                "Start the development server",
+                "Install the dependencies",
+                "Deploy to production",
+                "Run npm install and then npm start"
+            );
+
+            searchEmbeddings = embedAll(
+                "How do I implement rate limiting in Express",
+                "Search for how to connect to PostgreSQL in Java",
+                "Find a tutorial on Docker compose",
+                "What is the best way to handle file uploads",
+                "Look up how to use websockets in Python",
+                "Find documentation for Spring Security"
+            );
+
+            log.info("✓ Task classification embeddings initialized (6 categories × 6 prototypes)");
         } catch (Exception e) {
             log.warn("Failed to initialize classification embeddings: {}", e.getMessage());
         }
+    }
+
+    private List<Embedding> embedAll(String... sentences) {
+        List<Embedding> embeddings = new ArrayList<>();
+        for (String sentence : sentences) {
+            embeddings.add(embeddingModel.embed(sentence).content());
+        }
+        return embeddings;
     }
 
     private double cosineSimilarity(Embedding a, Embedding b) {

@@ -27,36 +27,26 @@ public class ProviderRegistry {
 
     @Value("${weaver.providers.groq.api-key:}")
     private String groqApiKey;
-    @Value("${weaver.providers.groq.model:llama-3-groq-70b-8192-tool-use-preview}")
-    private String groqModel;
     @Value("${weaver.providers.groq.enabled:true}")
     private boolean groqEnabled;
 
     @Value("${weaver.providers.gemini.api-key:}")
     private String geminiApiKey;
-    @Value("${weaver.providers.gemini.model:gemini-2.0-flash}")
-    private String geminiModel;
     @Value("${weaver.providers.gemini.enabled:true}")
     private boolean geminiEnabled;
 
     @Value("${weaver.providers.cerebras.api-key:}")
     private String cerebrasApiKey;
-    @Value("${weaver.providers.cerebras.model:gemma-4-31b}")
-    private String cerebrasModel;
     @Value("${weaver.providers.cerebras.enabled:true}")
     private boolean cerebrasEnabled;
 
     @Value("${weaver.providers.mistral.api-key:}")
     private String mistralApiKey;
-    @Value("${weaver.providers.mistral.model:mistral-small-latest}")
-    private String mistralModel;
     @Value("${weaver.providers.mistral.enabled:true}")
     private boolean mistralEnabled;
 
     @Value("${weaver.providers.openrouter.api-key:}")
     private String openrouterApiKey;
-    @Value("${weaver.providers.openrouter.model:nvidia/nemotron-3-super-120b-a12b:free}")
-    private String openrouterModel;
     @Value("${weaver.providers.openrouter.enabled:true}")
     private boolean openrouterEnabled;
 
@@ -76,108 +66,121 @@ public class ProviderRegistry {
 
     @PostConstruct
     public void init() {
+        // ─── Groq: 3 models, same API key ───────────────────────────
         if (groqEnabled && !groqApiKey.isBlank()) {
-            providers.add(new ProviderEntry("groq",
-                OpenAiChatModel.builder()
-                    .baseUrl("https://api.groq.com/openai/v1")
-                    .apiKey(groqApiKey)
-                    .modelName(groqModel)
-                    .maxTokens(4096)
-                    .timeout(Duration.ofSeconds(60))
-                    .maxRetries(1)
-                    .build(),
-                1, 131072, 30));
-            streamingModels.put("groq", OpenAiStreamingChatModel.builder()
-                    .baseUrl("https://api.groq.com/openai/v1")
-                    .apiKey(groqApiKey)
-                    .modelName(groqModel)
-                    .maxTokens(4096)
-                    .timeout(Duration.ofSeconds(60))
-                    .build());
-            log.info("✓ Groq registered (model: {}, RPM: 30)", groqModel);
+            registerGroqModel("groq/gpt-oss-20b", "openai/gpt-oss-20b", 1, 131072, 30);
+            registerGroqModel("groq/llama-3.1-8b", "llama-3.1-8b-instant", 2, 131072, 30);
+            registerGroqModel("groq/llama-3.3-70b", "llama-3.3-70b-versatile", 3, 131072, 30);
         }
 
+        // ─── Mistral: 7 models, same API key ────────────────────────
+        if (mistralEnabled && !mistralApiKey.isBlank()) {
+            registerMistralModel("mistral/medium-3.5", "mistral-medium-3-5-2604", 4, 131072, 30);
+            registerMistralModel("mistral/devstral", "devstral-2512", 5, 131072, 30);
+            registerMistralModel("mistral/small", "mistral-small-latest", 6, 32768, 30);
+            registerMistralModel("mistral/large", "mistral-large-2512", 7, 131072, 30);
+            registerMistralModel("mistral/ministral-14b", "ministral-3-14b-2512", 8, 131072, 30);
+            registerMistralModel("mistral/ministral-8b", "ministral-3-8b-2512", 9, 131072, 30);
+            registerMistralModel("mistral/ministral-3b", "ministral-3-3b-2512", 10, 131072, 30);
+        }
+
+        // ─── Gemini: 1 model ────────────────────────────────────────
         if (geminiEnabled && !geminiApiKey.isBlank()) {
-            providers.add(new ProviderEntry("gemini",
+            providers.add(new ProviderEntry("gemini/flash",
                 GoogleAiGeminiChatModel.builder()
                     .apiKey(geminiApiKey)
-                    .modelName(geminiModel)
+                    .modelName("gemini-2.0-flash")
                     .maxOutputTokens(8192)
                     .maxRetries(1)
                     .timeout(Duration.ofSeconds(90))
                     .build(),
-                2, 1048576, 15));
-            log.info("✓ Gemini registered (model: {}, RPM: 15)", geminiModel);
+                11, 1048576, 15));
+            log.info("✓ gemini/flash registered (gemini-2.0-flash, RPM: 15)");
         }
 
+        // ─── Cerebras: 1 model ──────────────────────────────────────
         if (cerebrasEnabled && !cerebrasApiKey.isBlank()) {
-            providers.add(new ProviderEntry("cerebras",
-                OpenAiChatModel.builder()
-                    .baseUrl("https://api.cerebras.ai/v1")
-                    .apiKey(cerebrasApiKey)
-                    .modelName(cerebrasModel)
-                    .maxTokens(4096)
-                    .maxRetries(1)
-                    .timeout(Duration.ofSeconds(60))
-                    .build(),
-                3, 131072, 30));
-            streamingModels.put("cerebras", OpenAiStreamingChatModel.builder()
-                    .baseUrl("https://api.cerebras.ai/v1")
-                    .apiKey(cerebrasApiKey)
-                    .modelName(cerebrasModel)
-                    .maxTokens(4096)
-                    .timeout(Duration.ofSeconds(60))
-                    .build());
-            log.info("✓ Cerebras registered (model: {})", cerebrasModel);
+            registerOpenAiCompatible("cerebras/gemma-4-31b", "https://api.cerebras.ai/v1",
+                cerebrasApiKey, "gemma-4-31b", 12, 131072, 30);
         }
 
-        if (mistralEnabled && !mistralApiKey.isBlank()) {
-            providers.add(new ProviderEntry("mistral",
-                OpenAiChatModel.builder()
-                    .baseUrl("https://api.mistral.ai/v1")
-                    .apiKey(mistralApiKey)
-                    .modelName(mistralModel)
-                    .maxTokens(4096)
-                    .maxRetries(1)
-                    .timeout(Duration.ofSeconds(60))
-                    .build(),
-                4, 32768, 30));
-            streamingModels.put("mistral", OpenAiStreamingChatModel.builder()
-                    .baseUrl("https://api.mistral.ai/v1")
-                    .apiKey(mistralApiKey)
-                    .modelName(mistralModel)
-                    .maxTokens(4096)
-                    .timeout(Duration.ofSeconds(60))
-                    .build());
-            log.info("✓ Mistral registered (model: {})", mistralModel);
-        }
-
+        // ─── OpenRouter: 1 model ────────────────────────────────────
         if (openrouterEnabled && !openrouterApiKey.isBlank()) {
-            providers.add(new ProviderEntry("openrouter",
-                OpenAiChatModel.builder()
-                    .baseUrl("https://openrouter.ai/api/v1")
-                    .apiKey(openrouterApiKey)
-                    .modelName(openrouterModel)
-                    .maxTokens(4096)
-                    .maxRetries(1)
-                    .timeout(Duration.ofSeconds(60))
-                    .build(),
-                5, 131072, 20));
-            streamingModels.put("openrouter", OpenAiStreamingChatModel.builder()
-                    .baseUrl("https://openrouter.ai/api/v1")
-                    .apiKey(openrouterApiKey)
-                    .modelName(openrouterModel)
-                    .maxTokens(4096)
-                    .timeout(Duration.ofSeconds(60))
-                    .build());
-            log.info("✓ OpenRouter registered (model: {})", openrouterModel);
+            registerOpenAiCompatible("openrouter/nemotron-120b", "https://openrouter.ai/api/v1",
+                openrouterApiKey, "nvidia/nemotron-3-super-120b-a12b:free", 13, 131072, 20);
         }
 
         if (providers.isEmpty()) {
             log.error("⚠ No AI providers configured!");
         } else {
-            log.info("Registered {} AI providers", providers.size());
+            log.info("Registered {} AI model entries across providers", providers.size());
         }
+    }
+
+    // ─── Registration helpers ─────────────────────────────────────────
+
+    private void registerGroqModel(String name, String modelName, int priority, long contextWindow, int rpmLimit) {
+        providers.add(new ProviderEntry(name,
+            OpenAiChatModel.builder()
+                .baseUrl("https://api.groq.com/openai/v1")
+                .apiKey(groqApiKey)
+                .modelName(modelName)
+                .maxTokens(4096)
+                .timeout(Duration.ofSeconds(60))
+                .maxRetries(1)
+                .build(),
+            priority, contextWindow, rpmLimit));
+        streamingModels.put(name, OpenAiStreamingChatModel.builder()
+                .baseUrl("https://api.groq.com/openai/v1")
+                .apiKey(groqApiKey)
+                .modelName(modelName)
+                .maxTokens(4096)
+                .timeout(Duration.ofSeconds(60))
+                .build());
+        log.info("✓ {} registered (model: {}, RPM: {})", name, modelName, rpmLimit);
+    }
+
+    private void registerMistralModel(String name, String modelName, int priority, long contextWindow, int rpmLimit) {
+        providers.add(new ProviderEntry(name,
+            OpenAiChatModel.builder()
+                .baseUrl("https://api.mistral.ai/v1")
+                .apiKey(mistralApiKey)
+                .modelName(modelName)
+                .maxTokens(4096)
+                .timeout(Duration.ofSeconds(60))
+                .maxRetries(1)
+                .build(),
+            priority, contextWindow, rpmLimit));
+        streamingModels.put(name, OpenAiStreamingChatModel.builder()
+                .baseUrl("https://api.mistral.ai/v1")
+                .apiKey(mistralApiKey)
+                .modelName(modelName)
+                .maxTokens(4096)
+                .timeout(Duration.ofSeconds(60))
+                .build());
+        log.info("✓ {} registered (model: {}, RPM: {})", name, modelName, rpmLimit);
+    }
+
+    private void registerOpenAiCompatible(String name, String baseUrl, String apiKey,
+                                           String modelName, int priority, long contextWindow, int rpmLimit) {
+        providers.add(new ProviderEntry(name,
+            OpenAiChatModel.builder()
+                .baseUrl(baseUrl)
+                .apiKey(apiKey)
+                .modelName(modelName)
+                .maxTokens(4096)
+                .timeout(Duration.ofSeconds(60))
+                .maxRetries(1)
+                .build(),
+            priority, contextWindow, rpmLimit));
+        streamingModels.put(name, OpenAiStreamingChatModel.builder()
+                .baseUrl(baseUrl)
+                .apiKey(apiKey)
+                .modelName(modelName)
+                .maxTokens(4096)
+                .timeout(Duration.ofSeconds(60))
+                .build());
+        log.info("✓ {} registered (model: {}, RPM: {})", name, modelName, rpmLimit);
     }
 
     /**
