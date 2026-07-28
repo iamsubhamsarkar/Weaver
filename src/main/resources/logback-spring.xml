@@ -2,20 +2,20 @@
 <configuration>
     <!--
       Weaver Logging Configuration:
-      - Session log: saved in the directory where weaver is called from (weaver-session.log)
-      - Captures EVERYTHING: user input, agent decisions, API calls, errors, tool results
-      - Console shows NOTHING (clean UX)
+      - Session log: APPENDS to weaver-session.log in user's working directory
+      - NEVER overwrites old logs — continuous across sessions
+      - Captures EVERYTHING: inputs, decisions, API calls, errors, tool results
     -->
 
-    <!-- Session log in the user's working directory (passed via -Dweaver.workspace) -->
+    <!-- Session log in the user's working directory -->
     <property name="SESSION_LOG" value="${weaver.workspace:-.}/weaver-session.log"/>
 
-    <!-- Session file appender - captures ALL activity -->
+    <!-- Session file appender - APPEND mode (never deletes old logs) -->
     <appender name="SESSION" class="ch.qos.logback.core.FileAppender">
         <file>${SESSION_LOG}</file>
-        <append>false</append>  <!-- Fresh log each time weaver starts -->
+        <append>true</append>  <!-- ALWAYS APPEND - never overwrite -->
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%-5level] %logger{20} - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] %logger{20} - %msg%n</pattern>
         </encoder>
     </appender>
 

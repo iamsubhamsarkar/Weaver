@@ -76,45 +76,77 @@ public class WeaverCli implements CommandLineRunner {
         printBanner();
         setupWizard.checkExpiryWarnings();
 
+        // Log session start
+        log.info("╔══════════════════════════════════════════════════════════════╗");
+        log.info("║  WEAVER SESSION STARTED                                     ║");
+        log.info("║  Session ID: {}                                        ║", sessionId);
+        log.info("║  Workspace: {}",  System.getProperty("weaver.workspace", "unknown"));
+        log.info("╚══════════════════════════════════════════════════════════════╝");
+
         // Main input loop
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
         while (true) {
-            // Always show prompt cleanly on a new line
-            System.out.print("\n\033[1;36mweaver>\033[0m ");
-            System.out.flush();
+            try {
+                // Always show prompt cleanly on a new line
+                System.out.print("\n\033[1;36mweaver>\033[0m ");
+                System.out.flush();
 
-            String input = reader.readLine();
+                String input = reader.readLine();
+                log.info("RAW INPUT RECEIVED: '{}'", input);
 
-            // Handle EOF (Ctrl+D) or quit
-            if (input == null || input.trim().equalsIgnoreCase("/quit") || input.trim().equalsIgnoreCase("/exit")) {
-                System.out.println("\n\033[33m👋 Goodbye!\033[0m");
-                System.exit(0);
-                return;
+                // Handle EOF (Ctrl+D) or quit
+                if (input == null) {
+                    log.info("INPUT IS NULL (EOF/Ctrl+D). Exiting.");
+                    System.out.println("\n\033[33m👋 Goodbye!\033[0m");
+                    break;
+                }
+
+                if (input.trim().equalsIgnoreCase("/quit") || input.trim().equalsIgnoreCase("/exit")) {
+                    log.info("USER QUIT.");
+                    System.out.println("\n\033[33m👋 Goodbye!\033[0m");
+                    break;
+                }
+
+                input = input.trim();
+                if (input.isEmpty()) {
+                    log.debug("Empty input, skipping.");
+                    continue;
+                }
+
+                // Slash commands
+                if (input.startsWith("/")) {
+                    log.info("COMMAND: '{}'", input);
+                    handleCommand(input);
+                    continue;
+                }
+
+                // Execute task
+                executeTask(input);
+
+            } catch (Exception e) {
+                log.error("LOOP ERROR (non-fatal, continuing): {}", e.getMessage(), e);
+                System.out.println("\033[31m  Error: " + e.getMessage() + "\033[0m");
+                // DON'T break — continue the loop
             }
-
-            input = input.trim();
-            if (input.isEmpty()) continue;
-
-            // Slash commands
-            if (input.startsWith("/")) {
-                handleCommand(input);
-                continue;
-            }
-
-            // Execute task
-            executeTask(input);
         }
+
+        log.info("═══ SESSION ENDED ═══");
+        System.exit(0);
     }
 
     private void executeTask(String input) {
         long start = System.currentTimeMillis();
-        log.info("USER INPUT: '{}'", input);
+        log.info("────────────────────────────────────────────────────");
+        log.info("EXECUTING TASK: '{}'", input);
 
         try {
             // Run the agent (output callbacks handle real-time display)
             String response = agent.execute(input, sessionId);
             long elapsed = System.currentTimeMillis() - start;
+
+            log.info("TASK COMPLETED in {}ms. Response length: {} chars", elapsed, 
+                    response != null ? response.length() : 0);
 
             // Print completion separator
             System.out.println();
@@ -122,10 +154,11 @@ public class WeaverCli implements CommandLineRunner {
 
         } catch (Exception e) {
             stopSpinnerIfActive();
+            log.error("TASK FAILED with exception: {}", e.getMessage(), e);
             System.out.println();
             System.out.println("\033[1;31m  ❌ Error: " + e.getMessage() + "\033[0m");
-            log.error("Agent execution failed", e);
         }
+        log.info("TASK HANDLER RETURNED. Ready for next input.");
     }
 
     private void stopSpinnerIfActive() {
