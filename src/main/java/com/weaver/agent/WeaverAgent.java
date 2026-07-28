@@ -156,47 +156,52 @@ public class WeaverAgent {
             }
         }
 
-        // ─── Layer 5: Plan-then-Execute (1 API call) ───
+        // ─── Layer 5: Strategy Selection ───
+        // CODE_GENERATION → straight to ReAct (needs full content generation, not JSON plans)
+        // Other tasks → try Plan-then-Execute first (efficient for orchestration)
         Set<String> failedThisRequest = new HashSet<>();
         ProviderRegistry.ProviderEntry provider = providerRegistry.getPrimaryProvider();
         if (provider == null) {
             return "ERROR: No providers configured. Run /configure.";
         }
 
-        outputCallback.accept(String.format("\n  🧠 %s | %d tools | Plan mode", taskType, selectedTools.size()));
+        boolean usePlan = (taskType == LocalBrain.TaskType.BUG_FIX
+                || taskType == LocalBrain.TaskType.SHELL_COMMAND
+                || taskType == LocalBrain.TaskType.FILE_READ);
 
-        Map<String, PlanExecutor.ToolMethod> planTools = new HashMap<>();
-        toolMethods.forEach((name, tm) ->
-            planTools.put(name, new PlanExecutor.ToolMethod(tm.instance(), tm.method())));
+        if (usePlan) {
+            outputCallback.accept(String.format("  🧠 %s | %d tools | Plan mode", taskType, selectedTools.size()));
 
-        try {
-            onThinkingStart.run();
-            PlanExecutor.PlanResult planResult = PlanExecutor.planAndExecute(
-                    provider.model(), userPrompt, config.getWorkspaceRoot(),
-                    planTools, selectedTools, outputCallback);
-            onThinkingStop.run();
+            Map<String, PlanExecutor.ToolMethod> planTools = new HashMap<>();
+            toolMethods.forEach((name, tm) ->
+                planTools.put(name, new PlanExecutor.ToolMethod(tm.instance(), tm.method())));
 
-            if (planResult != null && planResult.success()) {
-                // Gemma gate: validate the plan made sense
-                if (localBrain.validatePlanJson(userPrompt, planResult.rawPlan())) {
-                    providerRegistry.recordSuccess(provider.name());
-                    skillLibrary.storeSkill(userPrompt, planResult.rawPlan());
-                    experienceLibrary.storeSolution(userPrompt, planResult.response());
-                    streamResponse(planResult.response());
-                    return planResult.response();
-                } else {
-                    outputCallback.accept("  🧠 Plan rejected by validation — using ReAct...");
+            try {
+                onThinkingStart.run();
+                PlanExecutor.PlanResult planResult = PlanExecutor.planAndExecute(
+                        provider.model(), userPrompt, config.getWorkspaceRoot(),
+                        planTools, selectedTools, outputCallback);
+                onThinkingStop.run();
+
+                if (planResult != null && planResult.success()) {
+                    if (localBrain.validatePlanJson(userPrompt, planResult.rawPlan())) {
+                        providerRegistry.recordSuccess(provider.name());
+                        skillLibrary.storeSkill(userPrompt, planResult.rawPlan());
+                        experienceLibrary.storeSolution(userPrompt, planResult.response());
+                        streamResponse(planResult.response());
+                        return planResult.response();
+                    }
                 }
+            } catch (Exception e) {
+                onThinkingStop.run();
+                failedThisRequest.add(provider.name());
+                providerRegistry.classifyError(provider.name(), e);
             }
-        } catch (Exception e) {
-            onThinkingStop.run();
-            failedThisRequest.add(provider.name());
-            providerRegistry.classifyError(provider.name(), e);
+        } else {
+            outputCallback.accept(String.format("  🧠 %s | %d tools | ReAct mode", taskType, selectedTools.size()));
         }
 
-        // ─── Layer 6: ReAct Loop (fallback) ───
-        outputCallback.accept("  🔄 Falling back to step-by-step...");
-
+        // ─── Layer 6: ReAct Loop ───
         ProviderRegistry.ProviderEntry reactProvider = providerRegistry.getAvailableProvider(failedThisRequest);
         if (reactProvider == null) return "ERROR: All providers unavailable.";
 
