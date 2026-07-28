@@ -1,5 +1,6 @@
 package com.weaver.agent;
 
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.*;
 
 import java.util.ArrayList;
@@ -22,45 +23,110 @@ public class ContextCompressor {
 
     /**
      * Compress conversation with LocalBrain intelligence.
+     * Also sanitizes tool call/result pairs into plain messages for cross-provider compatibility.
+     * This prevents "Unexpected role 'tool' after role 'user'" errors when switching between providers.
      */
     public static List<ChatMessage> compress(List<ChatMessage> messages, LocalBrain localBrain, String userPrompt) {
-        List<ChatMessage> compressed = new ArrayList<>();
+        // First: sanitize tool call/result pairs into plain text messages
+        List<ChatMessage> sanitized = sanitizeForCrossProvider(messages, localBrain, userPrompt);
 
-        for (ChatMessage msg : messages) {
+        // Then: apply size compression
+        List<ChatMessage> compressed = new ArrayList<>();
+        for (ChatMessage msg : sanitized) {
             if (msg instanceof SystemMessage) {
                 compressed.add(msg);
             } else if (msg instanceof UserMessage) {
                 compressed.add(msg);
             } else if (msg instanceof AiMessage aiMsg) {
-                if (aiMsg.hasToolExecutionRequests()) {
-                    compressed.add(aiMsg);
-                } else if (aiMsg.text() != null) {
+                // After sanitization, no AiMessages should have tool calls
+                if (aiMsg.text() != null) {
                     String text = aiMsg.text();
                     if (text.length() > MAX_AI_TEXT_CHARS) {
                         text = text.substring(0, MAX_AI_TEXT_CHARS) + "... [trimmed]";
                     }
                     compressed.add(new AiMessage(text));
                 }
-            } else if (msg instanceof ToolExecutionResultMessage toolResult) {
-                String result = toolResult.text();
-                String compressedResult;
-
-                // Use LocalBrain for smart summarization if result is large
-                if (localBrain != null && result != null && result.length() > MAX_TOOL_RESULT_CHARS) {
-                    compressedResult = localBrain.summarizeForContext(
-                            toolResult.toolName(), result, userPrompt);
-                } else {
-                    compressedResult = simpleCompress(toolResult.toolName(), result);
-                }
-
-                compressed.add(new ToolExecutionResultMessage(
-                        toolResult.id(), toolResult.toolName(), compressedResult));
             } else {
                 compressed.add(msg);
             }
         }
 
         return compressed;
+    }
+
+    /**
+     * Convert AiMessage(tool_calls) + ToolExecutionResultMessage sequences into
+     * plain AiMessage + UserMessage pairs that any provider can understand.
+     *
+     * This is critical for multi-provider failover: when provider A made a tool call
+     * and got results, but then provider B takes over, provider B rejects the
+     * orphaned tool messages because it didn't generate the tool_calls.
+     *
+     * Transformation:
+     *   AiMessage(tool_calls=[{name:readFile, args:{path:x}}])
+     *   ToolExecutionResultMessage(id, readFile, "file contents...")
+     * Becomes:
+     *   AiMessage("I'll read the file x")
+     *   UserMessage("[Tool result: readFile] file contents...")
+     */
+    private static List<ChatMessage> sanitizeForCrossProvider(List<ChatMessage> messages,
+                                                              LocalBrain localBrain, String userPrompt) {
+        List<ChatMessage> result = new ArrayList<>();
+
+        for (int i = 0; i < messages.size(); i++) {
+            ChatMessage msg = messages.get(i);
+
+            if (msg instanceof AiMessage aiMsg && aiMsg.hasToolExecutionRequests()) {
+                // Convert tool call AiMessage into a plain text AiMessage
+                StringBuilder aiText = new StringBuilder("I called: ");
+                for (ToolExecutionRequest req : aiMsg.toolExecutionRequests()) {
+                    aiText.append(req.name()).append("(").append(truncateArgs(req.arguments())).append(") ");
+                }
+                result.add(new AiMessage(aiText.toString().trim()));
+
+                // Collect all following ToolExecutionResultMessages and convert to a UserMessage
+                StringBuilder toolResults = new StringBuilder();
+                while (i + 1 < messages.size() && messages.get(i + 1) instanceof ToolExecutionResultMessage) {
+                    i++;
+                    ToolExecutionResultMessage toolResult = (ToolExecutionResultMessage) messages.get(i);
+                    String content = toolResult.text();
+
+                    // Summarize large results
+                    if (localBrain != null && content != null && content.length() > MAX_TOOL_RESULT_CHARS) {
+                        content = localBrain.summarizeForContext(toolResult.toolName(), content, userPrompt);
+                    } else {
+                        content = simpleCompress(toolResult.toolName(), content);
+                    }
+
+                    toolResults.append("[").append(toolResult.toolName()).append(" result]: ")
+                            .append(content).append("\n");
+                }
+
+                if (toolResults.length() > 0) {
+                    result.add(new UserMessage(toolResults.toString().trim()));
+                }
+
+            } else if (msg instanceof ToolExecutionResultMessage toolResult) {
+                // Orphaned tool result without preceding AiMessage — convert to UserMessage
+                String content = toolResult.text();
+                if (localBrain != null && content != null && content.length() > MAX_TOOL_RESULT_CHARS) {
+                    content = localBrain.summarizeForContext(toolResult.toolName(), content, userPrompt);
+                } else {
+                    content = simpleCompress(toolResult.toolName(), content);
+                }
+                result.add(new UserMessage("[" + toolResult.toolName() + " result]: " + content));
+
+            } else {
+                result.add(msg);
+            }
+        }
+
+        return result;
+    }
+
+    private static String truncateArgs(String args) {
+        if (args == null) return "";
+        return args.length() > 80 ? args.substring(0, 80) + "..." : args;
     }
 
     /**
