@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
 import java.util.*;
 import java.util.regex.*;
 
@@ -256,56 +255,53 @@ public class LocalBrain {
         }
     }
 
-    // ─── Gemma via Ollama Integration ─────────────────────────
+    // ─── Gemma via Ollama HTTP API ─────────────────────────────
+
+    private static final String OLLAMA_API_URL = "http://localhost:11434/api/generate";
 
     private void checkGemmaAvailability() {
         try {
-            // Check if Ollama is installed and the model is available
-            ProcessBuilder pb = new ProcessBuilder("ollama", "list");
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
+            // Check if Ollama API is reachable
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(3)).build();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://localhost:11434/api/tags"))
+                    .timeout(java.time.Duration.ofSeconds(5))
+                    .GET().build();
 
-            String output = new String(p.getInputStream().readAllBytes());
-            boolean completed = p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+            java.net.http.HttpResponse<String> response = client.send(request,
+                    java.net.http.HttpResponse.BodyHandlers.ofString());
 
-            if (completed && p.exitValue() == 0 && output.contains("gemma")) {
+            if (response.statusCode() == 200 && response.body().contains("gemma")) {
                 gemmaAvailable = true;
-                log.info("✓ Local brain available (Ollama + Gemma)");
-                // Pre-warm the model so first call is fast
+                log.info("✓ Local brain available (Ollama API + Gemma)");
                 preWarmOllama();
             } else {
                 gemmaAvailable = false;
-                log.info("Local brain not available. Install with: curl -fsSL https://ollama.com/install.sh | sh && ollama pull gemma3:270m");
+                log.info("Gemma model not found in Ollama. Run: ollama pull gemma3:270m");
             }
         } catch (Exception e) {
             gemmaAvailable = false;
-            log.info("Ollama not found. Using embedding-based pre-processing only.");
+            log.info("Ollama API not reachable at localhost:11434. Using embedding-only mode.");
         }
     }
 
     /**
-     * Pre-warm Ollama by sending a tiny prompt in a background thread.
-     * Does NOT block startup. Model loads in background.
+     * Pre-warm: send a tiny request to load the model into RAM via API.
+     * Non-blocking (async), and sets keep_alive to 60 minutes.
      */
     private void preWarmOllama() {
         Thread warmupThread = new Thread(() -> {
             try {
-                log.info("  Pre-warming Ollama in background...");
-                ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:270m", "hi");
-                pb.redirectErrorStream(true);
-                Process process = pb.start();
-                process.getInputStream().readAllBytes();
-                boolean done = process.waitFor(30, java.util.concurrent.TimeUnit.SECONDS);
-                if (done && process.exitValue() == 0) {
-                    log.info("  ✓ Ollama pre-warmed (model loaded)");
+                log.info("  Pre-warming Ollama via API (loading model into RAM)...");
+                String result = callOllamaApi("hi", 5, 20);
+                if (result != null) {
+                    log.info("  ✓ Ollama pre-warmed. Model in RAM for 60 min.");
                 } else {
-                    log.warn("  Ollama pre-warm took too long. Disabling Gemma for this session.");
-                    if (!done) process.destroyForcibly();
-                    gemmaAvailable = false;
+                    log.warn("  Pre-warm returned null. First call may be slow.");
                 }
             } catch (Exception e) {
-                log.warn("  Pre-warm failed: {}. Disabling Gemma.", e.getMessage());
-                gemmaAvailable = false;
+                log.warn("  Pre-warm failed: {}", e.getMessage());
             }
         });
         warmupThread.setDaemon(true);
@@ -323,9 +319,9 @@ public class LocalBrain {
     }
 
     /**
-     * Run a prompt through Ollama's Gemma model.
-     * Uses: ollama run gemma3:270m "prompt"
-     * Returns null if unavailable or fails.
+     * Run a prompt through Ollama's HTTP API.
+     * Uses keep_alive=60m to keep model loaded between calls.
+     * Timeout: 5s strict. Returns null if unavailable or slow.
      */
     private String runGemma(String prompt) {
         if (!gemmaAvailable) {
@@ -334,40 +330,87 @@ public class LocalBrain {
         }
 
         long startMs = System.currentTimeMillis();
-        log.info("  [LocalBrain] Calling Ollama gemma3:270m...");
+        log.info("  [LocalBrain] Calling Ollama API...");
         log.debug("  [LocalBrain] Prompt: {}", prompt.length() > 150 ? prompt.substring(0, 150) + "..." : prompt);
 
-        try {
-            ProcessBuilder pb = new ProcessBuilder("ollama", "run", "gemma3:270m", prompt);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
+        String result = callOllamaApi(prompt, 60, 5);
+        long elapsed = System.currentTimeMillis() - startMs;
 
-            // Strict 5 second timeout — if model isn't warm, skip validation
-            boolean completed = process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
-            long elapsed = System.currentTimeMillis() - startMs;
-
-            if (!completed) {
-                process.destroyForcibly();
-                process.waitFor(1, java.util.concurrent.TimeUnit.SECONDS); // wait for cleanup
-                log.warn("  [LocalBrain] Gemma TIMEOUT after {}ms (5s limit). Skipping.", elapsed);
-                return null;
-            }
-
-            // Read output only after process completes
-            String result = new String(process.getInputStream().readAllBytes()).trim();
-
-            if (process.exitValue() != 0) {
-                log.warn("  [LocalBrain] Gemma exited with code {} after {}ms", process.exitValue(), elapsed);
-                return null;
-            }
-
+        if (result != null) {
             log.info("  [LocalBrain] Gemma responded in {}ms: '{}'", elapsed,
                     result.length() > 100 ? result.substring(0, 100) + "..." : result);
-            return result.isEmpty() ? null : result;
+        } else {
+            log.warn("  [LocalBrain] Gemma returned null after {}ms", elapsed);
+        }
+        return result;
+    }
+
+    /**
+     * Call Ollama HTTP API directly (no process spawning).
+     * Model stays loaded in memory for keepAliveMinutes.
+     */
+    private String callOllamaApi(String prompt, int maxTokens, int timeoutSeconds) {
+        try {
+            String jsonBody = String.format(
+                    "{\"model\":\"gemma3:270m\",\"prompt\":\"%s\",\"stream\":false,\"keep_alive\":\"60m\",\"options\":{\"num_predict\":%d}}",
+                    escapeJson(prompt), maxTokens);
+
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(2)).build();
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(OLLAMA_API_URL))
+                    .timeout(java.time.Duration.ofSeconds(timeoutSeconds))
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonBody))
+                    .build();
+
+            java.net.http.HttpResponse<String> response = client.send(request,
+                    java.net.http.HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                // Parse response JSON to get "response" field
+                String body = response.body();
+                int start = body.indexOf("\"response\":\"");
+                if (start >= 0) {
+                    start += 12;
+                    int end = body.indexOf("\"", start);
+                    // Handle escaped quotes in response
+                    while (end > 0 && body.charAt(end - 1) == '\\') {
+                        end = body.indexOf("\"", end + 1);
+                    }
+                    if (end > start) {
+                        return body.substring(start, end)
+                                .replace("\\n", "\n")
+                                .replace("\\\"", "\"")
+                                .trim();
+                    }
+                }
+                // Fallback: try Jackson parsing
+                try {
+                    com.fasterxml.jackson.databind.JsonNode node =
+                            new com.fasterxml.jackson.databind.ObjectMapper().readTree(body);
+                    if (node.has("response")) {
+                        return node.get("response").asText().trim();
+                    }
+                } catch (Exception ignored) {}
+            }
+            return null;
+        } catch (java.net.http.HttpTimeoutException e) {
+            log.warn("  [LocalBrain] Ollama API timeout ({}s limit)", timeoutSeconds);
+            return null;
         } catch (Exception e) {
-            log.warn("  [LocalBrain] Gemma FAILED: {}", e.getMessage());
+            log.warn("  [LocalBrain] Ollama API error: {}", e.getMessage());
             return null;
         }
+    }
+
+    private String escapeJson(String text) {
+        return text.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     // ─── Validation Gates (Gemma-powered when available) ────────
