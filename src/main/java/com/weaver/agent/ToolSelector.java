@@ -19,6 +19,9 @@ public class ToolSelector {
 
         Set<String> relevantNames = getRelevantToolNames(taskType);
 
+        // If classification is UNKNOWN or returned null, use all tools
+        if (relevantNames == null) return allTools;
+
         List<ToolSpecification> selected = new ArrayList<>();
         for (ToolSpecification tool : allTools) {
             if (relevantNames.contains(tool.name())) {
