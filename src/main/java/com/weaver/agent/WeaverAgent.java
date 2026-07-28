@@ -38,6 +38,7 @@ public class WeaverAgent {
     private final WeaverMemoryStore memoryStore;
     private final WeaverConfigProperties config;
     private final LocalBrain localBrain;
+    private final SkillLibrary skillLibrary;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final List<ToolSpecification> toolSpecs;
@@ -55,6 +56,7 @@ public class WeaverAgent {
                        WeaverMemoryStore memoryStore,
                        WeaverConfigProperties config,
                        LocalBrain localBrain,
+                       SkillLibrary skillLibrary,
                        CodebaseTools codebaseTools,
                        ShellTool shellTool,
                        WebSearchTool webSearchTool,
@@ -64,6 +66,7 @@ public class WeaverAgent {
         this.memoryStore = memoryStore;
         this.config = config;
         this.localBrain = localBrain;
+        this.skillLibrary = skillLibrary;
 
         this.toolSpecs = new ArrayList<>();
         this.toolMethods = new HashMap<>();
@@ -110,42 +113,87 @@ public class WeaverAgent {
     }
 
     public String execute(String userPrompt, String sessionId) {
-        // 1. Check semantic cache
+        // ═══ OPTIMIZATION PIPELINE ═══
+        // Cache → Skill → Plan-then-Execute → ReAct (fallback)
+
+        // ─── Layer 1: Semantic Cache (0 API calls) ───
         Optional<String> cached = experienceLibrary.lookupCachedSolution(userPrompt);
         if (cached.isPresent()) {
-            outputCallback.accept("\n🎯 Found cached solution from Experience Library!");
+            outputCallback.accept("\n🎯 Cache hit — instant response.");
+            streamResponse(cached.get());
             return cached.get();
         }
 
-        // 2. Auto pre-search: search web for best practices before coding
-        String preSearchContext = performPreSearch(userPrompt);
+        // ─── Layer 2: Skill Library Replay (0 API calls) ───
+        String skillPlan = skillLibrary.findMatchingSkill(userPrompt);
+        if (skillPlan != null) {
+            outputCallback.accept("\n📚 Skill match — replaying...");
+            String skillResult = replaySkill(skillPlan);
+            if (skillResult != null) return skillResult;
+            // Fell through — skill replay failed, continue to planning
+        }
 
-        // 3. Build conversation
+        // ─── Layer 3: Classify task + Select tools ───
+        LocalBrain.TaskType taskType = localBrain.classifyTask(userPrompt);
+        List<ToolSpecification> selectedTools = ToolSelector.selectTools(taskType, toolSpecs);
+
+        // ─── Layer 4: Pre-search for code gen tasks ───
+        String preSearchContext = null;
+        if (taskType == LocalBrain.TaskType.CODE_GENERATION) {
+            preSearchContext = performPreSearch(userPrompt);
+        }
+
+        // ─── Layer 5: Plan-then-Execute (1 API call) ───
+        Set<String> failedThisRequest = new HashSet<>();
+        ProviderRegistry.ProviderEntry provider = providerRegistry.getPrimaryProvider();
+        if (provider == null) {
+            return "ERROR: No providers configured. Run /configure.";
+        }
+
+        outputCallback.accept(String.format("\n  🧠 %s | %d tools | Plan mode", taskType, selectedTools.size()));
+
+        Map<String, PlanExecutor.ToolMethod> planTools = new HashMap<>();
+        toolMethods.forEach((name, tm) ->
+            planTools.put(name, new PlanExecutor.ToolMethod(tm.instance(), tm.method())));
+
+        try {
+            onThinkingStart.run();
+            PlanExecutor.PlanResult planResult = PlanExecutor.planAndExecute(
+                    provider.model(), userPrompt, config.getWorkspaceRoot(),
+                    planTools, selectedTools, outputCallback);
+            onThinkingStop.run();
+
+            if (planResult != null && planResult.success()) {
+                providerRegistry.recordSuccess(provider.name());
+                skillLibrary.storeSkill(userPrompt, planResult.rawPlan());
+                experienceLibrary.storeSolution(userPrompt, planResult.response());
+                streamResponse(planResult.response());
+                return planResult.response();
+            }
+        } catch (Exception e) {
+            onThinkingStop.run();
+            failedThisRequest.add(provider.name());
+            providerRegistry.classifyError(provider.name(), e);
+        }
+
+        // ─── Layer 6: ReAct Loop (fallback) ───
+        outputCallback.accept("  🔄 Falling back to step-by-step...");
+
+        ProviderRegistry.ProviderEntry reactProvider = providerRegistry.getAvailableProvider(failedThisRequest);
+        if (reactProvider == null) return "ERROR: All providers unavailable.";
+
+        ChatLanguageModel model = reactProvider.model();
+        String currentProvider = reactProvider.name();
+
         List<ChatMessage> messages = new ArrayList<>();
         messages.add(new SystemMessage(buildSystemPrompt()));
-
-        // Inject pre-search results as context if available
         if (preSearchContext != null) {
-            messages.add(new SystemMessage("REFERENCE (from web search - use as guidance):\n" + preSearchContext));
+            messages.add(new SystemMessage("REFERENCE:\n" + preSearchContext));
         }
-
-        // Add existing memory
         List<ChatMessage> history = memoryStore.getMessages(sessionId);
-        if (!history.isEmpty()) {
-            messages.addAll(history);
-        }
+        if (!history.isEmpty()) messages.addAll(history);
         messages.add(new UserMessage(userPrompt));
-
-        // 4. ReAct Loop with per-request failed set
-        Set<String> failedThisRequest = new HashSet<>();
-        ProviderRegistry.ProviderEntry currentProviderEntry = providerRegistry.getPrimaryProvider();
-
-        if (currentProviderEntry == null) {
-            return "ERROR: No AI providers configured. Add API keys via /configure";
-        }
-
-        ChatLanguageModel model = currentProviderEntry.model();
-        String currentProvider = currentProviderEntry.name();
+        messages = SlidingContextWindow.apply(messages);
 
         String finalResponse = null;
         int steps = 0;
@@ -158,7 +206,7 @@ public class WeaverAgent {
             try {
                 ChatRequest request = ChatRequest.builder()
                         .messages(messages)
-                        .toolSpecifications(toolSpecs)
+                        .toolSpecifications(selectedTools)
                         .build();
 
                 onThinkingStart.run();
@@ -169,88 +217,87 @@ public class WeaverAgent {
                 messages.add(aiMessage);
 
                 if (aiMessage.hasToolExecutionRequests()) {
-                    List<ToolExecutionRequest> toolCalls = aiMessage.toolExecutionRequests();
-
-                    for (ToolExecutionRequest toolCall : toolCalls) {
+                    for (ToolExecutionRequest toolCall : aiMessage.toolExecutionRequests()) {
                         outputCallback.accept(String.format("  🔧 %s(%s)",
                                 toolCall.name(), truncate(toolCall.arguments(), 80)));
-
                         String toolResult = executeTool(toolCall);
                         outputCallback.accept(String.format("  ← %s", truncate(toolResult, 120)));
-
                         messages.add(new ToolExecutionResultMessage(
                                 toolCall.id(), toolCall.name(), toolResult));
                     }
-
                     providerRegistry.recordSuccess(currentProvider);
+                    messages = SlidingContextWindow.apply(messages);
                     continue;
                 }
 
                 finalResponse = aiMessage.text();
-
-                // Stream the response for real-time UX
-                if (streamTokenCallback != null && finalResponse != null && !finalResponse.isEmpty()) {
-                    String[] words = finalResponse.split("(?<=\\s)");
-                    for (String word : words) {
-                        streamTokenCallback.accept(word);
-                        try { Thread.sleep(15); } catch (InterruptedException ignored) {}
-                    }
-                    streamTokenCallback.accept("\n");
-                }
-
                 providerRegistry.recordSuccess(currentProvider);
                 break;
 
             } catch (Exception e) {
                 onThinkingStop.run();
-
-                // Classify the error
-                ProviderRegistry.ErrorType errorType = providerRegistry.classifyError(currentProvider, e);
-
-                // Add to per-request failed set (never retry this provider in this request)
                 failedThisRequest.add(currentProvider);
+                providerRegistry.classifyError(currentProvider, e);
+                outputCallback.accept(String.format("  ⚠️ %s failed, switching...", currentProvider));
 
-                switch (errorType) {
-                    case RATE_LIMITED:
-                        outputCallback.accept(String.format("  ⚠️ %s rate-limited, switching provider...", currentProvider));
-                        break;
-                    case CAPABILITY_FAILURE:
-                        outputCallback.accept(String.format("  ⚠️ %s doesn't support tool calling, disabled permanently.", currentProvider));
-                        break;
-                    case NETWORK_ERROR:
-                        outputCallback.accept(String.format("  ⚠️ %s network error, switching provider...", currentProvider));
-                        break;
-                    default:
-                        outputCallback.accept(String.format("  ⚠️ %s failed, switching provider...", currentProvider));
-                }
-
-                // Get next available provider (respects failed set + rate limits)
-                ProviderRegistry.ProviderEntry nextProvider = providerRegistry.getAvailableProvider(failedThisRequest);
-                if (nextProvider == null) {
-                    finalResponse = "ERROR: All AI providers are unavailable. Please wait a minute and try again.";
-                    break;
-                }
-                model = nextProvider.model();
-                currentProvider = nextProvider.name();
-
-                // Compress context before handing to new model
+                ProviderRegistry.ProviderEntry next = providerRegistry.getAvailableProvider(failedThisRequest);
+                if (next == null) { finalResponse = "ERROR: All providers exhausted."; break; }
+                model = next.model();
+                currentProvider = next.name();
                 messages = ContextCompressor.compress(messages, localBrain, userPrompt);
+                messages = SlidingContextWindow.apply(messages);
             }
         }
 
-        if (finalResponse == null) {
-            finalResponse = "Agent reached maximum steps (" + maxSteps + ") without completing.";
-        }
+        if (finalResponse == null) finalResponse = "Max steps reached. Task may be incomplete.";
 
-        // Save memory
         memoryStore.updateMessages(sessionId, messages);
-
-        // Cache successful solutions
-        if (!finalResponse.startsWith("ERROR") && !finalResponse.startsWith("Agent reached")) {
+        if (!finalResponse.startsWith("ERROR") && !finalResponse.startsWith("Max steps")) {
             experienceLibrary.storeSolution(userPrompt, finalResponse);
         }
-
+        streamResponse(finalResponse);
         return finalResponse;
+    }
+
+    private String replaySkill(String planJson) {
+        try {
+            var node = objectMapper.readTree(planJson);
+            var steps = node.get("steps");
+            if (steps == null || !steps.isArray()) return null;
+
+            outputCallback.accept("  📋 " + steps.size() + " steps");
+            for (int i = 0; i < steps.size(); i++) {
+                var step = steps.get(i);
+                String toolName = step.get("tool").asText();
+                outputCallback.accept(String.format("  🔧 [%d/%d] %s", i + 1, steps.size(), toolName));
+                String result = executeToolFromArgs(toolName, step.get("args"));
+                if (result != null && result.startsWith("ERROR")) return null;
+                outputCallback.accept("  ← " + truncate(result, 100));
+            }
+            String msg = node.has("final_message") ? node.get("final_message").asText() : "Done.";
+            streamResponse(msg);
+            return msg;
+        } catch (Exception e) { return null; }
+    }
+
+    private void streamResponse(String response) {
+        if (streamTokenCallback != null && response != null && !response.isEmpty()) {
+            for (String word : response.split("(?<=\\s)")) {
+                streamTokenCallback.accept(word);
+                try { Thread.sleep(15); } catch (InterruptedException ignored) {}
+            }
+            streamTokenCallback.accept("\n");
+        }
+    }
+
+    private String executeToolFromArgs(String toolName, JsonNode args) {
+        ToolMethod tm = toolMethods.get(toolName);
+        if (tm == null) return "ERROR: Unknown tool: " + toolName;
+        try {
+            Object[] methodArgs = parseArguments(args.toString(), tm.method());
+            Object result = tm.method().invoke(tm.instance(), methodArgs);
+            return result != null ? result.toString() : "(no output)";
+        } catch (Exception e) { return "ERROR: " + e.getMessage(); }
     }
 
     /**
