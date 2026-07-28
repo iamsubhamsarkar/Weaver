@@ -122,47 +122,69 @@ public class WeaverAgent {
         // Cache → Skill → Plan-then-Execute → ReAct (fallback)
 
         // ─── Layer 1: Semantic Cache (0 API calls) ───
-        log.debug("Layer 1: Checking semantic cache...");
+        log.info("Layer 1: Checking semantic cache...");
         Optional<String> cached = experienceLibrary.lookupCachedSolution(userPrompt);
         if (cached.isPresent()) {
-            log.info("Cache HIT. Validating relevance...");
-            // Gemma gate: validate cache is actually relevant
+            log.info("Cache HIT (found {} chars). Validating with Gemma...", cached.get().length());
             if (localBrain.validateCacheRelevance(userPrompt, cached.get())) {
-                log.info("Cache ACCEPTED. Returning cached response.");
+                log.info("Cache ACCEPTED by Gemma. Returning cached response.");
                 outputCallback.accept("\n🎯 Cache hit — instant response.");
                 streamResponse(cached.get());
                 return cached.get();
             } else {
+                log.info("Cache REJECTED by Gemma. Continuing to next layer.");
                 outputCallback.accept("\n  🧠 Cache hit rejected by validation — continuing...");
             }
+        } else {
+            log.info("Cache MISS. No matching solution found.");
         }
 
         // ─── Layer 2: Skill Library Replay (0 API calls) ───
+        log.info("Layer 2: Checking skill library ({} skills loaded)...", skillLibrary.getSkillCount());
         String skillPlan = skillLibrary.findMatchingSkill(userPrompt);
         if (skillPlan != null) {
-            // Gemma gate: validate skill fits this task
+            log.info("Skill MATCH found. Validating with Gemma...");
             if (localBrain.validateSkillFit(userPrompt, skillPlan)) {
+                log.info("Skill ACCEPTED. Replaying...");
                 outputCallback.accept("\n📚 Skill match — replaying...");
                 String skillResult = replaySkill(skillPlan);
-                if (skillResult != null) return skillResult;
+                if (skillResult != null) {
+                    log.info("Skill replay SUCCEEDED: {}", truncate(skillResult, 100));
+                    return skillResult;
+                }
+                log.info("Skill replay FAILED (tool error). Falling through.");
             } else {
+                log.info("Skill REJECTED by Gemma. Planning fresh.");
                 outputCallback.accept("\n  🧠 Skill rejected by validation — planning fresh...");
             }
+        } else {
+            log.info("No skill match.");
         }
 
         // ─── Layer 3: Classify task + Select tools ───
         LocalBrain.TaskType taskType = localBrain.classifyTask(userPrompt);
         List<ToolSpecification> selectedTools = ToolSelector.selectTools(taskType, toolSpecs, userPrompt);
         log.info("Layer 3: Classification={}, Tools selected={}/{}", taskType, selectedTools.size(), toolSpecs.size());
+        log.info("  Selected tools: {}", selectedTools.stream().map(t -> t.name()).toList());
 
         // ─── Layer 4: Pre-search for code gen tasks ───
+        log.info("Layer 4: Pre-search check (taskType={})", taskType);
         String preSearchContext = null;
         if (taskType == LocalBrain.TaskType.CODE_GENERATION) {
             preSearchContext = performPreSearch(userPrompt);
-            // Gemma gate: validate search results are relevant
-            if (preSearchContext != null && !localBrain.validateSearchRelevance(userPrompt, preSearchContext)) {
-                preSearchContext = null; // Discard irrelevant results
+            if (preSearchContext != null) {
+                log.info("Pre-search returned {} chars. Validating with Gemma...", preSearchContext.length());
+                if (!localBrain.validateSearchRelevance(userPrompt, preSearchContext)) {
+                    log.info("Pre-search REJECTED by Gemma. Discarding.");
+                    preSearchContext = null;
+                } else {
+                    log.info("Pre-search ACCEPTED. Will inject as context.");
+                }
+            } else {
+                log.info("Pre-search returned nothing or skipped.");
             }
+        } else {
+            log.info("Pre-search skipped (not CODE_GENERATION).");
         }
 
         // ─── Layer 5: Strategy Selection ───
@@ -180,6 +202,7 @@ public class WeaverAgent {
         log.info("Layer 5: Strategy={}, Provider={}", usePlan ? "PLAN" : "REACT", provider.name());
 
         if (usePlan) {
+            log.info("Attempting Plan-then-Execute...");
             outputCallback.accept(String.format("  🧠 %s | %d tools | Plan mode", taskType, selectedTools.size()));
 
             Map<String, PlanExecutor.ToolMethod> planTools = new HashMap<>();
@@ -194,20 +217,29 @@ public class WeaverAgent {
                 onThinkingStop.run();
 
                 if (planResult != null && planResult.success()) {
+                    log.info("Plan SUCCEEDED. Response: {}", truncate(planResult.response(), 100));
+                    log.info("Validating plan with Gemma...");
                     if (localBrain.validatePlanJson(userPrompt, planResult.rawPlan())) {
+                        log.info("Plan ACCEPTED. Storing skill + caching.");
                         providerRegistry.recordSuccess(provider.name());
                         skillLibrary.storeSkill(userPrompt, planResult.rawPlan());
                         experienceLibrary.storeSolution(userPrompt, planResult.response());
                         streamResponse(planResult.response());
                         return planResult.response();
+                    } else {
+                        log.info("Plan REJECTED by Gemma. Falling to ReAct.");
                     }
+                } else {
+                    log.info("Plan returned null or failed. Falling to ReAct.");
                 }
             } catch (Exception e) {
                 onThinkingStop.run();
+                log.error("Plan EXCEPTION: {}", e.getMessage());
                 failedThisRequest.add(provider.name());
                 providerRegistry.classifyError(provider.name(), e);
             }
         } else {
+            log.info("Skipping Plan (task type {} uses ReAct directly)", taskType);
             outputCallback.accept(String.format("  🧠 %s | %d tools | ReAct mode", taskType, selectedTools.size()));
         }
 
@@ -242,6 +274,8 @@ public class WeaverAgent {
         while (steps < maxSteps) {
             steps++;
             log.info("ReAct Step {}/{} [provider={}]", steps, maxSteps, currentProvider);
+            log.debug("  Messages in context: {} (types: {})", messages.size(),
+                    messages.stream().map(m -> m.getClass().getSimpleName()).toList());
             outputCallback.accept(String.format("\n⚡ Step %d/%d [%s]", steps, maxSteps, currentProvider));
 
             try {
