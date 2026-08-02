@@ -75,17 +75,30 @@ public class ProviderRegistry {
     public void init() {
         // ─── TIER 1: NVIDIA NIM — Frontier models, free, OpenAI-compatible ───
         // Endpoint: https://integrate.api.nvidia.com/v1 (confirmed Aug 2026)
-        // Note: Not all models support function/tool calling on free tier.
-        // Models verified to work: nemotron-super-49b, deepseek-v4-flash, qwen3-coder
-        // Rate: ~40 RPM free tier, GPU-hosted, but large models can be slow (use 120s timeout)
+        // Free tier = no cost, so we can afford to wait for better quality.
+        // Timeout: 300s (5 min) — frontier models on free GPUs can be slow but high quality.
+        // Ordered by intelligence/capability (smartest first):
         if (nvidiaEnabled && !nvidiaApiKey.isBlank()) {
-            registerNvidiaModel("nim/deepseek-v4-flash", "deepseek-ai/deepseek-v4-flash",
+            // S-tier: Massive frontier models (best quality)
+            registerNvidiaModel("nim/nemotron-ultra-550b", "nvidia/nemotron-3-ultra-550b-a55b",
                     0, 131072, 40);
-            registerNvidiaModel("nim/nemotron-super-49b", "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+            registerNvidiaModel("nim/deepseek-v4-pro", "deepseek-ai/deepseek-v4-pro",
                     0, 131072, 40);
             registerNvidiaModel("nim/qwen3-coder-480b", "qwen/qwen3-coder-480b-a35b-instruct",
                     0, 131072, 40);
+            // A-tier: Fast and smart (best balance of speed + quality)
+            registerNvidiaModel("nim/kimi-k2-instruct", "moonshotai/kimi-k2-instruct",
+                    0, 131072, 40);
+            registerNvidiaModel("nim/gpt-oss-120b", "openai/gpt-oss-120b",
+                    0, 131072, 40);
             registerNvidiaModel("nim/nemotron-super-120b", "nvidia/nemotron-3-super-120b-a12b",
+                    0, 131072, 40);
+            registerNvidiaModel("nim/qwen3-next-80b", "qwen/qwen3-next-80b-a3b-instruct",
+                    0, 131072, 40);
+            registerNvidiaModel("nim/nemotron-super-49b", "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+                    0, 131072, 40);
+            // Flash: Fastest response (slightly less smart but near-instant)
+            registerNvidiaModel("nim/deepseek-v4-flash", "deepseek-ai/deepseek-v4-flash",
                     0, 131072, 40);
         }
 
@@ -194,7 +207,7 @@ public class ProviderRegistry {
                 .apiKey(nvidiaApiKey)
                 .modelName(modelName)
                 .maxTokens(4096)
-                .timeout(Duration.ofSeconds(120))
+                .timeout(Duration.ofSeconds(300))
                 .maxRetries(1)
                 .build(),
             priority, contextWindow, rpmLimit));
@@ -203,7 +216,7 @@ public class ProviderRegistry {
                 .apiKey(nvidiaApiKey)
                 .modelName(modelName)
                 .maxTokens(4096)
-                .timeout(Duration.ofSeconds(120))
+                .timeout(Duration.ofSeconds(300))
                 .build());
         log.info("✓ {} registered [TIER 1 NIM] (model: {}, RPM: {})", name, modelName, rpmLimit);
     }

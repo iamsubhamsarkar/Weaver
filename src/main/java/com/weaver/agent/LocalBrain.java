@@ -339,10 +339,10 @@ public class LocalBrain {
     private void preWarmOllama() {
         Thread warmupThread = new Thread(() -> {
             try {
-                log.info("  Pre-warming Ollama via API (loading MiniCPM5 into RAM)...");
+                log.info("  Pre-warming Ollama via API (loading Qwen2 into RAM)...");
                 String result = callOllamaApi("hi", 5, 20);
                 if (result != null) {
-                    log.info("  ✓ MiniCPM5 pre-warmed. Model in RAM for 60 min.");
+                    log.info("  ✓ Qwen2 pre-warmed. Model in RAM for 60 min.");
                 } else {
                     log.warn("  Pre-warm returned null. First call may be slow.");
                 }
@@ -577,30 +577,16 @@ public class LocalBrain {
 
     /**
      * Validate a tool call before execution (pre-validation gate).
-     * Checks if the tool call makes sense for the current task context.
+     * DISABLED: Small local models (1.5B) lack the reasoning capacity to correctly
+     * determine if a tool call is appropriate. They default to "NO" for safety,
+     * which blocks all productive work. This gate should only be enabled when
+     * using a model >= 7B that can actually reason about tool appropriateness.
+     *
+     * Always returns true (allow all tool calls).
      */
     public boolean validateToolCall(String userPrompt, String toolName, String arguments) {
-        log.info("  [Gate] validateToolCall: tool={}, minicpmAvailable={}", toolName, minicpmAvailable);
-        if (!minicpmAvailable) { log.info("  [Gate] → PASS (no MiniCPM5)"); return true; }
-
-        // Only validate destructive tools
-        if (!toolName.equals("writeFile") && !toolName.equals("editFile")
-                && !toolName.equals("run") && !toolName.equals("runCommand")) {
-            return true;
-        }
-
-        String truncatedArgs = arguments.length() > 200 ? arguments.substring(0, 200) : arguments;
-
-        String result = runLocalModel(
-            "Is this tool call safe and correct for the task? "
-            + "Answer ONLY 'YES' or 'NO'.\n"
-            + "Task: " + userPrompt + "\n"
-            + "Tool: " + toolName + "(" + truncatedArgs + ")");
-
-        if (result == null) { log.info("  [Gate] → PASS (MiniCPM5 returned null)"); return true; }
-        boolean pass = !result.trim().toUpperCase().startsWith("NO");
-        log.info("  [Gate] → {} (MiniCPM5 said: '{}')", pass ? "PASS" : "REJECT", result.trim());
-        return pass;
+        // Pre-execution validation disabled — small models reject valid tool calls
+        return true;
     }
 
     // ─── Utility ─────────────────────────────────────────────────
