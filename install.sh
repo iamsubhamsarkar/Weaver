@@ -200,7 +200,22 @@ echo -e "${CYAN}[6/6] API Key Setup...${RESET}"
 CREDENTIALS_FILE="$WEAVER_HOME/credentials.yml"
 
 if [ -f "$CREDENTIALS_FILE" ] && grep "api-key:" "$CREDENTIALS_FILE" 2>/dev/null | grep -qv "YOUR_"; then
-    echo -e "  ${GREEN}✓${RESET} API keys already configured"
+    echo -e "  ${GREEN}✓${RESET} Existing API keys found"
+    # Check if NVIDIA key is missing (it's new and most important)
+    if ! grep -q "nvidia:" "$CREDENTIALS_FILE" 2>/dev/null; then
+        echo -e "  ${YELLOW}⚠${RESET} NVIDIA NIM key not found (recommended for best performance)"
+        echo -e "  \033[1m[NVIDIA NIM (RECOMMENDED)]\033[0m https://build.nvidia.com"
+        read -p "  API Key: " nvidia_key
+        if [ -n "$nvidia_key" ]; then
+            echo "" >> "$CREDENTIALS_FILE"
+            echo "nvidia:" >> "$CREDENTIALS_FILE"
+            echo "  api-key: $nvidia_key" >> "$CREDENTIALS_FILE"
+            echo "" >> "$CREDENTIALS_FILE"
+            echo -e "  ${GREEN}✓ NVIDIA key saved${RESET}"
+        else
+            echo -e "  ${DIM}  Skipped (you can add it later in ~/.weaver/credentials.yml)${RESET}"
+        fi
+    fi
 else
     setup_keys
 fi

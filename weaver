@@ -118,7 +118,35 @@ start_ollama() {
     echo -e "${DIM}  Ollama: started (may need a moment to load model)${RESET}"
 }
 
-# ─── Step 5: Launch ───────────────────────────────────────
+# ─── Step 5: Load credentials as env vars ─────────────────
+load_credentials() {
+    if [ ! -f "$CREDENTIALS_FILE" ]; then
+        return
+    fi
+
+    # Parse the simple YAML structure and export as env vars
+    # Format: provider:\n  api-key: VALUE
+    local current_provider=""
+    while IFS= read -r line; do
+        # Skip comments and empty lines
+        [[ "$line" =~ ^#.*$ ]] && continue
+        [[ -z "$line" ]] && continue
+
+        # Provider line (no leading whitespace, ends with :)
+        if [[ "$line" =~ ^([a-z]+):$ ]]; then
+            current_provider="${BASH_REMATCH[1]}"
+        # Key line (has leading whitespace)
+        elif [[ "$line" =~ ^[[:space:]]+api-key:[[:space:]]*(.+)$ ]]; then
+            local key_value="${BASH_REMATCH[1]}"
+            if [ -n "$current_provider" ] && [ -n "$key_value" ] && [[ "$key_value" != YOUR_* ]]; then
+                local env_var="${current_provider^^}_API_KEY"
+                export "$env_var"="$key_value"
+            fi
+        fi
+    done < "$CREDENTIALS_FILE"
+}
+
+# ─── Step 6: Launch ───────────────────────────────────────
 launch() {
     # Pass the user's actual working directory (where they typed 'weaver')
     # to the JVM so the agent operates on the correct project
@@ -137,4 +165,5 @@ check_java
 build_if_needed
 start_chromadb
 start_ollama
+load_credentials
 launch "$@"
