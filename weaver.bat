@@ -46,7 +46,7 @@ where docker >nul 2>&1
 if %errorlevel% equ 0 (
     docker ps --format "{{.Names}}" 2>nul | findstr /i "weaver-chroma" >nul 2>&1
     if %errorlevel% neq 0 (
-        docker start weaver-chroma >nul 2>&1 || docker run -d --name weaver-chroma --restart unless-stopped -p 8000:8000 chromadb/chroma:latest >nul 2>&1
+        docker start weaver-chroma >nul 2>&1 || docker run -d --name weaver-chroma --restart unless-stopped -p 8000:8000 chromadb/chroma:0.5.23 >nul 2>&1
     )
 )
 

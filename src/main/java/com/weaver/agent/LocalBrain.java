@@ -120,14 +120,22 @@ public class LocalBrain {
 
     /**
      * Extract a smart web search query from the user's prompt.
-     * Uses MiniCPM5 for high quality extraction, with NLP fallback.
+     * Uses few-shot pattern completion for Qwen2 1.5B.
      */
     public String extractSearchQuery(String userPrompt) {
-        // Try MiniCPM5 first if available
+        // Try local model first if available
         if (minicpmAvailable) {
-            String result = runLocalModel("Extract a concise web search query from this request. "
-                    + "Output ONLY the search query, nothing else:\n" + userPrompt);
-            if (result != null) return result;
+            // Few-shot pattern completion — no instructions, just examples
+            String prompt = "IN: Create a REST API with authentication in Spring Boot\n"
+                    + "OUT: REST API authentication Spring Boot tutorial\n\n"
+                    + "IN: Fix the CORS error in my React app calling Express backend\n"
+                    + "OUT: CORS error React Express fix\n\n"
+                    + "IN: Build a login page with gradient background and form validation\n"
+                    + "OUT: login page HTML CSS gradient form validation\n\n"
+                    + "IN: " + (userPrompt.length() > 100 ? userPrompt.substring(0, 100) : userPrompt) + "\n"
+                    + "OUT:";
+            String result = runLocalModel(prompt);
+            if (result != null && !result.isBlank() && !result.contains("search for")) return result.trim();
         }
 
         // Fallback: NLP-based extraction
@@ -224,18 +232,23 @@ public class LocalBrain {
 
     /**
      * Summarize a tool result intelligently.
-     * Uses MiniCPM5 for instruction-following summarization.
+     * Uses few-shot pattern completion for Qwen2 1.5B.
      */
     public String summarizeForContext(String toolName, String content, String userPrompt) {
         if (content == null || content.length() <= 300) return content;
 
-        // Try MiniCPM5 if available
+        // Try local model with few-shot pattern
         if (minicpmAvailable) {
-            String truncated = content.length() > 1000 ? content.substring(0, 1000) : content;
-            String result = runLocalModel("Summarize this " + toolName
-                    + " output in 1-2 lines. Be extremely concise. Only include information relevant to: "
-                    + userPrompt + "\n\nOutput:\n" + truncated);
-            if (result != null) return result;
+            String truncated = content.length() > 800 ? content.substring(0, 800) : content;
+            // Few-shot: show the exact output format expected
+            String prompt = "IN: [File about React todo app with useState, useEffect, localStorage]\n"
+                    + "SUM: React todo app using hooks and localStorage for persistence\n\n"
+                    + "IN: [Directory listing: src/, package.json, README.md, tests/, .gitignore]\n"
+                    + "SUM: Node.js project with src, tests, and standard config files\n\n"
+                    + "IN: [" + truncated.substring(0, Math.min(200, truncated.length())) + "...]\n"
+                    + "SUM:";
+            String result = runLocalModel(prompt);
+            if (result != null && !result.isBlank() && result.length() < 200) return result.trim();
         }
 
         // Fallback: embedding-based extractive summarization
@@ -369,7 +382,7 @@ public class LocalBrain {
         log.info("  [LocalBrain] Calling MiniCPM5 via Ollama API...");
         log.debug("  [LocalBrain] Prompt: {}", prompt.length() > 150 ? prompt.substring(0, 150) + "..." : prompt);
 
-        String result = callOllamaApi(prompt, 120, 8);
+        String result = callOllamaApi(prompt, 30, 8);
         long elapsed = System.currentTimeMillis() - startMs;
 
         if (result != null) {
@@ -388,9 +401,8 @@ public class LocalBrain {
      */
     private String callOllamaApi(String prompt, int maxTokens, int timeoutSeconds) {
         try {
-            // Use system prompt for consistent MiniCPM5 behavior
-            String systemPrompt = "You are Weaver's local brain. You answer concisely in 1-2 sentences. "
-                    + "Follow instructions exactly. Output ONLY what is asked, no preamble.";
+            // Ultra-short system prompt — research shows <50 words is optimal for 1.5B models
+            String systemPrompt = "Complete the pattern. Output only what comes after the arrow (→) or after OUT:";
 
             String jsonBody = String.format(
                     "{\"model\":\"%s\",\"system\":\"%s\",\"prompt\":\"%s\",\"stream\":false,"
@@ -464,20 +476,22 @@ public class LocalBrain {
      */
     public boolean validateCacheRelevance(String userPrompt, String cachedSolution) {
         log.info("  [Gate] validateCacheRelevance: minicpmAvailable={}", minicpmAvailable);
-        if (!minicpmAvailable) { log.info("  [Gate] → PASS (no MiniCPM5)"); return true; }
+        if (!minicpmAvailable) { log.info("  [Gate] → PASS (no local model)"); return true; }
 
-        String truncatedSolution = cachedSolution.length() > 300
-                ? cachedSolution.substring(0, 300) : cachedSolution;
+        String truncatedSolution = cachedSolution.length() > 200
+                ? cachedSolution.substring(0, 200) : cachedSolution;
 
-        String result = runLocalModel(
-            "Does this cached solution match the user's request? "
-            + "Answer ONLY 'YES' or 'NO'.\n"
-            + "User request: " + userPrompt + "\n"
-            + "Cached solution (preview): " + truncatedSolution);
+        // Few-shot YES/NO pattern — no abstract instructions
+        String prompt = "Q: Does cached answer match the request?\n"
+                + "Request: Build a login page | Cache: HTML login form with CSS → YES\n"
+                + "Request: Fix database error | Cache: HTML login form with CSS → NO\n"
+                + "Request: " + (userPrompt.length() > 60 ? userPrompt.substring(0, 60) : userPrompt)
+                + " | Cache: " + truncatedSolution.substring(0, Math.min(60, truncatedSolution.length())) + " →";
 
-        if (result == null) { log.info("  [Gate] → PASS (MiniCPM5 returned null)"); return true; }
+        String result = runLocalModel(prompt);
+        if (result == null) { log.info("  [Gate] → PASS (returned null)"); return true; }
         boolean pass = !result.trim().toUpperCase().startsWith("NO");
-        log.info("  [Gate] → {} (MiniCPM5 said: '{}')", pass ? "PASS" : "REJECT", result.trim());
+        log.info("  [Gate] → {} (said: '{}')", pass ? "PASS" : "REJECT", result.trim());
         return pass;
     }
 
@@ -487,36 +501,40 @@ public class LocalBrain {
      */
     public boolean validateSkillFit(String userPrompt, String skillDescription) {
         log.info("  [Gate] validateSkillFit: minicpmAvailable={}", minicpmAvailable);
-        if (!minicpmAvailable) { log.info("  [Gate] → PASS (no MiniCPM5)"); return true; }
+        if (!minicpmAvailable) { log.info("  [Gate] → PASS (no local model)"); return true; }
 
-        String result = runLocalModel(
-            "Can this stored skill be reused for the new task? "
-            + "Answer ONLY 'YES' or 'NO'.\n"
-            + "Stored skill was for: " + skillDescription + "\n"
-            + "New task: " + userPrompt);
+        // Few-shot pattern
+        String prompt = "Q: Can old skill be reused for new task?\n"
+                + "Old: create login page | New: build signup form → YES\n"
+                + "Old: create login page | New: fix database connection → NO\n"
+                + "Old: " + (skillDescription.length() > 50 ? skillDescription.substring(0, 50) : skillDescription)
+                + " | New: " + (userPrompt.length() > 50 ? userPrompt.substring(0, 50) : userPrompt) + " →";
 
-        if (result == null) { log.info("  [Gate] → PASS (MiniCPM5 returned null)"); return true; }
+        String result = runLocalModel(prompt);
+        if (result == null) { log.info("  [Gate] → PASS (returned null)"); return true; }
         boolean pass = !result.trim().toUpperCase().startsWith("NO");
-        log.info("  [Gate] → {} (MiniCPM5 said: '{}')", pass ? "PASS" : "REJECT", result.trim());
+        log.info("  [Gate] → {} (said: '{}')", pass ? "PASS" : "REJECT", result.trim());
         return pass;
     }
 
     public boolean validateSearchRelevance(String userPrompt, String searchResults) {
         log.info("  [Gate] validateSearchRelevance: minicpmAvailable={}", minicpmAvailable);
-        if (!minicpmAvailable) { log.info("  [Gate] → PASS (no MiniCPM5)"); return true; }
+        if (!minicpmAvailable) { log.info("  [Gate] → PASS (no local model)"); return true; }
 
-        String truncatedResults = searchResults.length() > 300
-                ? searchResults.substring(0, 300) : searchResults;
+        String truncatedResults = searchResults.length() > 200
+                ? searchResults.substring(0, 200) : searchResults;
 
-        String result = runLocalModel(
-            "Are these search results relevant to the user's coding task? "
-            + "Answer ONLY 'YES' or 'NO'.\n"
-            + "Task: " + userPrompt + "\n"
-            + "Search results (preview): " + truncatedResults);
+        // Few-shot pattern
+        String prompt = "Q: Are search results useful for the task?\n"
+                + "Task: build login page | Results: HTML form tutorial, CSS styling → YES\n"
+                + "Task: build login page | Results: cooking recipes, weather API → NO\n"
+                + "Task: " + (userPrompt.length() > 50 ? userPrompt.substring(0, 50) : userPrompt)
+                + " | Results: " + truncatedResults.substring(0, Math.min(80, truncatedResults.length())) + " →";
 
-        if (result == null) { log.info("  [Gate] → PASS (MiniCPM5 returned null)"); return true; }
+        String result = runLocalModel(prompt);
+        if (result == null) { log.info("  [Gate] → PASS (returned null)"); return true; }
         boolean pass = !result.trim().toUpperCase().startsWith("NO");
-        log.info("  [Gate] → {} (MiniCPM5 said: '{}')", pass ? "PASS" : "REJECT", result.trim());
+        log.info("  [Gate] → {} (said: '{}')", pass ? "PASS" : "REJECT", result.trim());
         return pass;
     }
 
@@ -524,54 +542,55 @@ public class LocalBrain {
         log.info("  [Gate] validatePlanJson: minicpmAvailable={}", minicpmAvailable);
         if (!minicpmAvailable) {
             boolean structureOk = planJson != null && planJson.contains("\"steps\"") && planJson.contains("\"tool\"");
-            log.info("  [Gate] → {} (no MiniCPM5, basic JSON check)", structureOk ? "PASS" : "REJECT");
+            log.info("  [Gate] → {} (no local model, basic JSON check)", structureOk ? "PASS" : "REJECT");
             return structureOk;
         }
 
-        String truncatedPlan = planJson.length() > 500
-                ? planJson.substring(0, 500) : planJson;
+        String truncatedPlan = planJson.length() > 300
+                ? planJson.substring(0, 300) : planJson;
 
-        String result = runLocalModel(
-            "Is this execution plan reasonable for the task? "
-            + "Check: does it use the right tools? Are the steps logical? "
-            + "Answer ONLY 'YES' or 'NO'.\n"
-            + "Task: " + userPrompt + "\n"
-            + "Plan: " + truncatedPlan);
+        // Few-shot pattern
+        String prompt = "Q: Is this plan reasonable for the task?\n"
+                + "Task: create file | Plan: steps:[readFile, writeFile] → YES\n"
+                + "Task: create file | Plan: steps:[deleteDatabase] → NO\n"
+                + "Task: " + (userPrompt.length() > 40 ? userPrompt.substring(0, 40) : userPrompt)
+                + " | Plan: " + truncatedPlan.substring(0, Math.min(80, truncatedPlan.length())) + " →";
 
+        String result = runLocalModel(prompt);
         if (result == null) {
             boolean structureOk = planJson.contains("\"steps\"") && planJson.contains("\"tool\"");
-            log.info("  [Gate] → {} (MiniCPM5 null, fallback JSON check)", structureOk ? "PASS" : "REJECT");
+            log.info("  [Gate] → {} (null, fallback check)", structureOk ? "PASS" : "REJECT");
             return structureOk;
         }
         boolean pass = !result.trim().toUpperCase().startsWith("NO");
-        log.info("  [Gate] → {} (MiniCPM5 said: '{}')", pass ? "PASS" : "REJECT", result.trim());
+        log.info("  [Gate] → {} (said: '{}')", pass ? "PASS" : "REJECT", result.trim());
         return pass;
     }
 
     public boolean validateOutput(String userPrompt, String toolName, String result) {
         log.info("  [Gate] validateOutput: tool={}, minicpmAvailable={}", toolName, minicpmAvailable);
-        if (!minicpmAvailable) { log.info("  [Gate] → PASS (no MiniCPM5)"); return true; }
+        if (!minicpmAvailable) { log.info("  [Gate] → PASS (no local model)"); return true; }
 
-        // Only validate significant outputs (writeFile, run)
+        // Only validate final responses
         if (toolName == null || (!toolName.equals("writeFile") && !toolName.equals("run")
                 && !toolName.equals("response"))) {
             log.info("  [Gate] → PASS (tool '{}' not validated)", toolName);
             return true;
         }
 
-        String truncatedResult = result.length() > 200
-                ? result.substring(0, 200) : result;
+        String truncatedResult = result.length() > 150 ? result.substring(0, 150) : result;
 
-        String modelResult = runLocalModel(
-            "Did this tool execution succeed for the task? "
-            + "Answer ONLY 'YES' or 'NO'.\n"
-            + "Task: " + userPrompt + "\n"
-            + "Tool: " + toolName + "\n"
-            + "Result: " + truncatedResult);
+        // Few-shot pattern
+        String prompt = "Q: Did the task complete successfully?\n"
+                + "Task: create login page | Result: Successfully wrote index.html → YES\n"
+                + "Task: run tests | Result: ERROR: compilation failed → NO\n"
+                + "Task: " + (userPrompt.length() > 40 ? userPrompt.substring(0, 40) : userPrompt)
+                + " | Result: " + truncatedResult.substring(0, Math.min(60, truncatedResult.length())) + " →";
 
-        if (modelResult == null) { log.info("  [Gate] → PASS (MiniCPM5 returned null)"); return true; }
+        String modelResult = runLocalModel(prompt);
+        if (modelResult == null) { log.info("  [Gate] → PASS (returned null)"); return true; }
         boolean pass = !modelResult.trim().toUpperCase().startsWith("NO");
-        log.info("  [Gate] → {} (MiniCPM5 said: '{}')", pass ? "PASS" : "REJECT", modelResult.trim());
+        log.info("  [Gate] → {} (said: '{}')", pass ? "PASS" : "REJECT", modelResult.trim());
         return pass;
     }
 

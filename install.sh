@@ -184,13 +184,13 @@ if command -v docker &> /dev/null; then
             # Create new container
             echo -e "  ${DIM}Pulling ChromaDB image (~200MB, one-time)...${RESET}"
             docker run -d --name weaver-chroma --restart unless-stopped \
-                -p 8000:8000 chromadb/chroma:latest &> /dev/null
+                -p 8000:8000 chromadb/chroma:0.5.23 &> /dev/null
             echo -e "  ${GREEN}✓${RESET} ChromaDB container created and running"
         fi
     else
         echo -e "  ${YELLOW}⚠${RESET} Docker daemon not running. Start Docker and re-run install, or run:"
         echo -e "     ${DIM}sudo systemctl start docker${RESET}"
-        echo -e "     ${DIM}docker run -d --name weaver-chroma --restart unless-stopped -p 8000:8000 chromadb/chroma:latest${RESET}"
+        echo -e "     ${DIM}docker run -d --name weaver-chroma --restart unless-stopped -p 8000:8000 chromadb/chroma:0.5.23${RESET}"
     fi
 else
     echo -e "  ${YELLOW}⚠${RESET} Docker not found. Installing..."
@@ -205,7 +205,7 @@ else
             echo -e "  ${GREEN}✓${RESET} Docker installed"
             # Start ChromaDB
             sudo docker run -d --name weaver-chroma --restart unless-stopped \
-                -p 8000:8000 chromadb/chroma:latest &> /dev/null
+                -p 8000:8000 chromadb/chroma:0.5.23 &> /dev/null
             echo -e "  ${GREEN}✓${RESET} ChromaDB running on port 8000"
             echo -e "  ${DIM}  Note: Log out and back in for docker group to take effect${RESET}"
         else

@@ -7,7 +7,7 @@ docker run -d \
   --restart unless-stopped \
   -p 8000:8000 \
   -v "$(pwd)/chromadb-data:/chroma/chroma" \
-  chromadb/chroma:latest
+  chromadb/chroma:0.5.23
 
 echo "✓ ChromaDB started at http://localhost:8000"
 echo "  Collection: weaver-experience"

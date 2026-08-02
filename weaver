@@ -106,7 +106,7 @@ start_chromadb() {
         docker start weaver-chroma &> /dev/null
     else
         docker run -d --name weaver-chroma --restart unless-stopped \
-            -p 8000:8000 chromadb/chroma:latest &> /dev/null
+            -p 8000:8000 chromadb/chroma:0.5.23 &> /dev/null
     fi
 
     # Wait for ChromaDB to be ready
