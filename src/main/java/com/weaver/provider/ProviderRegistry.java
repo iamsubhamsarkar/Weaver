@@ -75,18 +75,17 @@ public class ProviderRegistry {
     public void init() {
         // ─── TIER 1: NVIDIA NIM — Frontier models, free, OpenAI-compatible ───
         // Endpoint: https://integrate.api.nvidia.com/v1 (confirmed Aug 2026)
-        // Models: Nemotron Ultra 253B, Nemotron Super 49B v1.5, Nemotron Super 120B, DeepSeek V4
-        // Rate: ~40 RPM free tier, GPU-hosted
+        // Note: Not all models support function/tool calling on free tier.
+        // Models verified to work: nemotron-super-49b, deepseek-v4-flash, qwen3-coder
+        // Rate: ~40 RPM free tier, GPU-hosted, but large models can be slow (use 120s timeout)
         if (nvidiaEnabled && !nvidiaApiKey.isBlank()) {
-            registerNvidiaModel("nim/nemotron-ultra-253b", "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+            registerNvidiaModel("nim/deepseek-v4-flash", "deepseek-ai/deepseek-v4-flash",
                     0, 131072, 40);
             registerNvidiaModel("nim/nemotron-super-49b", "nvidia/llama-3.3-nemotron-super-49b-v1.5",
                     0, 131072, 40);
-            registerNvidiaModel("nim/nemotron-super-120b", "nvidia/nemotron-3-super-120b-a12b",
-                    0, 131072, 40);
-            registerNvidiaModel("nim/deepseek-v4-flash", "deepseek-ai/deepseek-v4-flash",
-                    0, 131072, 40);
             registerNvidiaModel("nim/qwen3-coder-480b", "qwen/qwen3-coder-480b-a35b-instruct",
+                    0, 131072, 40);
+            registerNvidiaModel("nim/nemotron-super-120b", "nvidia/nemotron-3-super-120b-a12b",
                     0, 131072, 40);
         }
 
@@ -195,7 +194,7 @@ public class ProviderRegistry {
                 .apiKey(nvidiaApiKey)
                 .modelName(modelName)
                 .maxTokens(4096)
-                .timeout(Duration.ofSeconds(90))
+                .timeout(Duration.ofSeconds(120))
                 .maxRetries(1)
                 .build(),
             priority, contextWindow, rpmLimit));
@@ -204,7 +203,7 @@ public class ProviderRegistry {
                 .apiKey(nvidiaApiKey)
                 .modelName(modelName)
                 .maxTokens(4096)
-                .timeout(Duration.ofSeconds(90))
+                .timeout(Duration.ofSeconds(120))
                 .build());
         log.info("✓ {} registered [TIER 1 NIM] (model: {}, RPM: {})", name, modelName, rpmLimit);
     }
