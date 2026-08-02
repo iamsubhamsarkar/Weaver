@@ -31,9 +31,9 @@ setup_keys() {
     echo "" >> "$CRED_FILE"
 
     local KEY_COUNT=0
-    local providers=("groq" "gemini" "cerebras" "mistral" "openrouter")
-    local names=("Groq" "Google Gemini" "Cerebras" "Mistral" "OpenRouter")
-    local urls=("https://console.groq.com" "https://aistudio.google.com/apikey" "https://cloud.cerebras.ai" "https://console.mistral.ai" "https://openrouter.ai/keys")
+    local providers=("nvidia" "groq" "gemini" "cerebras" "mistral" "openrouter")
+    local names=("NVIDIA NIM (RECOMMENDED)" "Groq" "Google Gemini" "Cerebras" "Mistral" "OpenRouter")
+    local urls=("https://build.nvidia.com" "https://console.groq.com" "https://aistudio.google.com/apikey" "https://cloud.cerebras.ai" "https://console.mistral.ai" "https://openrouter.ai/keys")
 
     for i in "${!providers[@]}"; do
         echo -e "  \033[1m[${names[$i]}]\033[0m ${urls[$i]}"
@@ -132,8 +132,8 @@ else
     echo -e "  ${GREEN}✓${RESET} Maven installed"
 fi
 
-# ─── Step 3: Ollama + Gemma 270M (Local Brain) ────────────
-echo -e "${CYAN}[3/6] Setting up Local Brain (Ollama + Gemma 270M)...${RESET}"
+# ─── Step 3: Ollama + MiniCPM5-1B Q8 (Local Brain) ───────
+echo -e "${CYAN}[3/6] Setting up Local Brain (Ollama + MiniCPM5-1B Q8)...${RESET}"
 
 if command -v ollama &> /dev/null; then
     echo -e "  ${GREEN}✓${RESET} Ollama found"
@@ -150,15 +150,22 @@ if ! ollama list &> /dev/null 2>&1; then
     sleep 3
 fi
 
-# Pull Gemma model if not already present
-if ollama list 2>/dev/null | grep -q "gemma3:270m"; then
-    echo -e "  ${GREEN}✓${RESET} Gemma model ready"
+# Pull MiniCPM5 model if not already present (replaces old Gemma 270M)
+if ollama list 2>/dev/null | grep -q "minicpm5"; then
+    echo -e "  ${GREEN}✓${RESET} MiniCPM5 model ready"
 else
-    echo -e "  ${DIM}Pulling Gemma 3 1B model (~815MB, one-time)...${RESET}"
-    ollama pull gemma3:270m 2>&1 | grep -E "pulling|success|verifying" | while read line; do
+    echo -e "  ${DIM}Pulling MiniCPM5-1B Q8 model (~1.1GB, one-time)...${RESET}"
+    ollama pull minicpm5:1b-q8_0 2>&1 | grep -E "pulling|success|verifying" | while read line; do
         echo -e "       ${DIM}$line${RESET}"
     done
-    echo -e "  ${GREEN}✓${RESET} Gemma model pulled"
+    echo -e "  ${GREEN}✓${RESET} MiniCPM5 model pulled"
+fi
+
+# Remove old Gemma model if present (no longer needed)
+if ollama list 2>/dev/null | grep -q "gemma3:270m"; then
+    echo -e "  ${DIM}Removing old Gemma 270M model (replaced by MiniCPM5)...${RESET}"
+    ollama rm gemma3:270m 2>/dev/null || true
+    echo -e "  ${GREEN}✓${RESET} Old model removed"
 fi
 
 # ─── Step 4: Build Weaver ─────────────────────────────────
@@ -210,6 +217,6 @@ echo -e "${DIM}  Components installed:"
 echo "    • Java 21 (runtime)"
 echo "    • Weaver Agent (JAR)"
 echo "    • Ollama (local AI runtime)"
-echo "    • Gemma 3 1B (local brain for validation)"
+echo "    • MiniCPM5-1B Q8 (local brain for validation/routing)"
 echo -e "    • API keys (~/.weaver/credentials.yml)${RESET}"
 echo ""

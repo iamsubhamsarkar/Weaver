@@ -110,7 +110,7 @@ start_ollama() {
     # Wait up to 5 seconds for it to become ready
     for i in 1 2 3 4 5; do
         if curl -s --connect-timeout 1 http://localhost:11434/api/tags &> /dev/null; then
-            echo -e "${DIM}  Ollama: ready (Gemma local brain active)${RESET}"
+            echo -e "${DIM}  Ollama: ready (MiniCPM5 local brain active)${RESET}"
             return
         fi
         sleep 1
