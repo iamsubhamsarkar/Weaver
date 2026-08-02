@@ -8,7 +8,7 @@ import java.util.List;
 public class WeaverConfigProperties {
     private double semanticMinScore = 0.92;
     private int cacheMaxResults = 1;
-    private int maxAgentSteps = 15;
+    private int maxAgentSteps = 40;
     private int defaultContextTokenBudget = 8000;
     private int complexTaskThresholdScore = 70;
     private List<String> allowedFileExtensions = List.of(

@@ -12,7 +12,7 @@ spring:
 weaver:
   cli:
     enabled: true
-  max-agent-steps: 15
+  max-agent-steps: 40
   semantic-min-score: 0.92
   cache-max-results: 1
   workspace-root: ${user.dir}
