@@ -25,6 +25,13 @@ public class ProviderRegistry {
     // Minimum delay between calls to the same provider (prevents RPM limit)
     private static final long MIN_CALL_INTERVAL_MS = 2500;
 
+    // ─── TIER 1: NVIDIA NIM (Priority 0 — frontier models, free, GPU-hosted) ───
+    @Value("${weaver.providers.nvidia.api-key:}")
+    private String nvidiaApiKey;
+    @Value("${weaver.providers.nvidia.enabled:true}")
+    private boolean nvidiaEnabled;
+
+    // ─── TIER 2: Free cloud APIs ───
     @Value("${weaver.providers.groq.api-key:}")
     private String groqApiKey;
     @Value("${weaver.providers.groq.enabled:true}")
@@ -66,6 +73,25 @@ public class ProviderRegistry {
 
     @PostConstruct
     public void init() {
+        // ─── TIER 1: NVIDIA NIM — Frontier models, free, OpenAI-compatible ───
+        // Endpoint: https://integrate.api.nvidia.com/v1 (confirmed Aug 2026)
+        // Models: Nemotron Ultra 253B, Nemotron Super 49B v1.5, Nemotron Super 120B, DeepSeek V4
+        // Rate: ~40 RPM free tier, GPU-hosted
+        if (nvidiaEnabled && !nvidiaApiKey.isBlank()) {
+            registerNvidiaModel("nim/nemotron-ultra-253b", "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+                    0, 131072, 40);
+            registerNvidiaModel("nim/nemotron-super-49b", "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+                    0, 131072, 40);
+            registerNvidiaModel("nim/nemotron-super-120b", "nvidia/nemotron-3-super-120b-a12b",
+                    0, 131072, 40);
+            registerNvidiaModel("nim/deepseek-v4-flash", "deepseek-ai/deepseek-v4-flash",
+                    0, 131072, 40);
+            registerNvidiaModel("nim/qwen3-coder-480b", "qwen/qwen3-coder-480b-a35b-instruct",
+                    0, 131072, 40);
+        }
+
+        // ─── TIER 2: Free cloud APIs ────────────────────────────────
+
         // ─── Groq: 3 models, same API key ───────────────────────────
         if (groqEnabled && !groqApiKey.isBlank()) {
             registerGroqModel("groq/gpt-oss-20b", "openai/gpt-oss-20b", 1, 131072, 30);
@@ -160,6 +186,27 @@ public class ProviderRegistry {
                 .timeout(Duration.ofSeconds(60))
                 .build());
         log.info("✓ {} registered (model: {}, RPM: {})", name, modelName, rpmLimit);
+    }
+
+    private void registerNvidiaModel(String name, String modelName, int priority, long contextWindow, int rpmLimit) {
+        providers.add(new ProviderEntry(name,
+            OpenAiChatModel.builder()
+                .baseUrl("https://integrate.api.nvidia.com/v1")
+                .apiKey(nvidiaApiKey)
+                .modelName(modelName)
+                .maxTokens(4096)
+                .timeout(Duration.ofSeconds(90))
+                .maxRetries(1)
+                .build(),
+            priority, contextWindow, rpmLimit));
+        streamingModels.put(name, OpenAiStreamingChatModel.builder()
+                .baseUrl("https://integrate.api.nvidia.com/v1")
+                .apiKey(nvidiaApiKey)
+                .modelName(modelName)
+                .maxTokens(4096)
+                .timeout(Duration.ofSeconds(90))
+                .build());
+        log.info("✓ {} registered [TIER 1 NIM] (model: {}, RPM: {})", name, modelName, rpmLimit);
     }
 
     private void registerOpenAiCompatible(String name, String baseUrl, String apiKey,

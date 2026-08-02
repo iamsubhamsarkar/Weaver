@@ -27,3 +27,6 @@ Thumbs.db
 
 # Maven wrapper
 !.mvn/wrapper/maven-wrapper.jar
+
+# Internal planning docs (not for public repo)
+docs/

@@ -39,6 +39,9 @@ public class WeaverAgent {
     private final WeaverConfigProperties config;
     private final LocalBrain localBrain;
     private final SkillLibrary skillLibrary;
+    private final ContextBudgetManager contextBudgetManager;
+    private final SemanticRouter semanticRouter;
+    private final SelfImprovementSystem selfImprovement;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final List<ToolSpecification> toolSpecs;
@@ -57,6 +60,9 @@ public class WeaverAgent {
                        WeaverConfigProperties config,
                        LocalBrain localBrain,
                        SkillLibrary skillLibrary,
+                       ContextBudgetManager contextBudgetManager,
+                       SemanticRouter semanticRouter,
+                       SelfImprovementSystem selfImprovement,
                        CodebaseTools codebaseTools,
                        ShellTool shellTool,
                        WebSearchTool webSearchTool,
@@ -67,6 +73,9 @@ public class WeaverAgent {
         this.config = config;
         this.localBrain = localBrain;
         this.skillLibrary = skillLibrary;
+        this.contextBudgetManager = contextBudgetManager;
+        this.semanticRouter = semanticRouter;
+        this.selfImprovement = selfImprovement;
 
         this.toolSpecs = new ArrayList<>();
         this.toolMethods = new HashMap<>();
@@ -125,14 +134,14 @@ public class WeaverAgent {
         log.info("Layer 1: Checking semantic cache...");
         Optional<String> cached = experienceLibrary.lookupCachedSolution(userPrompt);
         if (cached.isPresent()) {
-            log.info("Cache HIT (found {} chars). Validating with Gemma...", cached.get().length());
+            log.info("Cache HIT (found {} chars). Validating with LocalBrain...", cached.get().length());
             if (localBrain.validateCacheRelevance(userPrompt, cached.get())) {
-                log.info("Cache ACCEPTED by Gemma. Returning cached response.");
+                log.info("Cache ACCEPTED by LocalBrain. Returning cached response.");
                 outputCallback.accept("\n🎯 Cache hit — instant response.");
                 streamResponse(cached.get());
                 return cached.get();
             } else {
-                log.info("Cache REJECTED by Gemma. Continuing to next layer.");
+                log.info("Cache REJECTED by LocalBrain. Continuing to next layer.");
                 outputCallback.accept("\n  🧠 Cache hit rejected by validation — continuing...");
             }
         } else {
@@ -143,7 +152,7 @@ public class WeaverAgent {
         log.info("Layer 2: Checking skill library ({} skills loaded)...", skillLibrary.getSkillCount());
         String skillPlan = skillLibrary.findMatchingSkill(userPrompt);
         if (skillPlan != null) {
-            log.info("Skill MATCH found. Validating with Gemma...");
+            log.info("Skill MATCH found. Validating with LocalBrain...");
             if (localBrain.validateSkillFit(userPrompt, skillPlan)) {
                 log.info("Skill ACCEPTED. Replaying...");
                 outputCallback.accept("\n📚 Skill match — replaying...");
@@ -154,17 +163,21 @@ public class WeaverAgent {
                 }
                 log.info("Skill replay FAILED (tool error). Falling through.");
             } else {
-                log.info("Skill REJECTED by Gemma. Planning fresh.");
+                log.info("Skill REJECTED by LocalBrain. Planning fresh.");
                 outputCallback.accept("\n  🧠 Skill rejected by validation — planning fresh...");
             }
         } else {
             log.info("No skill match.");
         }
 
-        // ─── Layer 3: Classify task + Select tools ───
-        LocalBrain.TaskType taskType = localBrain.classifyTask(userPrompt);
+        // ─── Layer 3: Classify task + Select tools (Semantic Router) ───
+        SemanticRouter.RouteResult routeResult = semanticRouter.classify(userPrompt);
+        LocalBrain.TaskType taskType = semanticRouter.toTaskType(routeResult.category());
         List<ToolSpecification> selectedTools = ToolSelector.selectTools(taskType, toolSpecs, userPrompt);
-        log.info("Layer 3: Classification={}, Tools selected={}/{}", taskType, selectedTools.size(), toolSpecs.size());
+        log.info("Layer 3: Route={} (confidence={}, complexity={}, tier={}), Tools selected={}/{}",
+                routeResult.category(), String.format("%.3f", routeResult.confidence()),
+                routeResult.complexity(), routeResult.recommendedTier(),
+                selectedTools.size(), toolSpecs.size());
         log.info("  Selected tools: {}", selectedTools.stream().map(t -> t.name()).toList());
 
         // ─── Layer 4: Pre-search for code gen tasks ───
@@ -173,9 +186,9 @@ public class WeaverAgent {
         if (taskType == LocalBrain.TaskType.CODE_GENERATION) {
             preSearchContext = performPreSearch(userPrompt);
             if (preSearchContext != null) {
-                log.info("Pre-search returned {} chars. Validating with Gemma...", preSearchContext.length());
+                log.info("Pre-search returned {} chars. Validating with LocalBrain...", preSearchContext.length());
                 if (!localBrain.validateSearchRelevance(userPrompt, preSearchContext)) {
-                    log.info("Pre-search REJECTED by Gemma. Discarding.");
+                    log.info("Pre-search REJECTED by LocalBrain. Discarding.");
                     preSearchContext = null;
                 } else {
                     log.info("Pre-search ACCEPTED. Will inject as context.");
@@ -218,7 +231,7 @@ public class WeaverAgent {
 
                 if (planResult != null && planResult.success()) {
                     log.info("Plan SUCCEEDED. Response: {}", truncate(planResult.response(), 100));
-                    log.info("Validating plan with Gemma...");
+                    log.info("Validating plan with LocalBrain...");
                     if (localBrain.validatePlanJson(userPrompt, planResult.rawPlan())) {
                         log.info("Plan ACCEPTED. Storing skill + caching.");
                         providerRegistry.recordSuccess(provider.name());
@@ -227,7 +240,7 @@ public class WeaverAgent {
                         streamResponse(planResult.response());
                         return planResult.response();
                     } else {
-                        log.info("Plan REJECTED by Gemma. Falling to ReAct.");
+                        log.info("Plan REJECTED by LocalBrain. Falling to ReAct.");
                     }
                 } else {
                     log.info("Plan returned null or failed. Falling to ReAct.");
@@ -279,6 +292,9 @@ public class WeaverAgent {
             outputCallback.accept(String.format("\n⚡ Step %d/%d [%s]", steps, maxSteps, currentProvider));
 
             try {
+                // Apply context budget before sending to LLM
+                messages = contextBudgetManager.applyBudget(messages, reactProvider.contextWindow(), userPrompt);
+
                 ChatRequest request = ChatRequest.builder()
                         .messages(messages)
                         .toolSpecifications(selectedTools)
@@ -296,9 +312,30 @@ public class WeaverAgent {
                         log.info("Tool call: {}({})", toolCall.name(), truncate(toolCall.arguments(), 200));
                         outputCallback.accept(String.format("  🔧 %s(%s)",
                                 toolCall.name(), truncate(toolCall.arguments(), 80)));
+
+                        // ─── Validation Gate: Pre-execution ───
+                        if (!localBrain.validateToolCall(userPrompt, toolCall.name(), toolCall.arguments())) {
+                            log.warn("  [Gate] Tool call REJECTED by MiniCPM5: {}({})",
+                                    toolCall.name(), truncate(toolCall.arguments(), 80));
+                            outputCallback.accept("  ⛔ Tool call rejected by validation — asking LLM to retry");
+                            messages.add(new ToolExecutionResultMessage(
+                                    toolCall.id(), toolCall.name(),
+                                    "VALIDATION_REJECTED: This tool call was rejected by the safety validator. "
+                                    + "Please try a different approach or verify your arguments."));
+                            continue;
+                        }
+
                         String toolResult = executeTool(toolCall);
                         log.info("Tool result: {} chars, starts with: {}", 
                                 toolResult != null ? toolResult.length() : 0, truncate(toolResult, 100));
+
+                        // ─── Validation Gate: Post-execution ───
+                        if (toolResult != null && toolResult.startsWith("ERROR")) {
+                            // Record error for self-improvement
+                            selfImprovement.recordFailure(userPrompt, routeResult.category(),
+                                    toolResult, toolCall.name());
+                        }
+
                         outputCallback.accept(String.format("  ← %s", truncate(toolResult, 120)));
                         messages.add(new ToolExecutionResultMessage(
                                 toolCall.id(), toolCall.name(), toolResult));
@@ -386,10 +423,18 @@ public class WeaverAgent {
 
         memoryStore.updateMessages(sessionId, messages);
         if (!finalResponse.startsWith("ERROR") && !finalResponse.startsWith("Max steps")) {
-            // Gemma gate: validate output before caching
+            // LocalBrain gate: validate output before caching
             if (localBrain.validateOutput(userPrompt, "response", finalResponse)) {
                 experienceLibrary.storeSolution(userPrompt, finalResponse);
             }
+            // Self-improvement: record success
+            selfImprovement.recordSuccess(userPrompt, routeResult.category(),
+                    selectedTools.stream().map(t -> t.name()).toList().toString(), finalResponse);
+        } else {
+            // Self-improvement: record failure
+            selfImprovement.recordFailure(userPrompt, routeResult.category(),
+                    finalResponse,
+                    selectedTools.stream().map(t -> t.name()).toList().toString());
         }
         streamResponse(finalResponse);
         return finalResponse;
@@ -552,6 +597,7 @@ public class WeaverAgent {
     }
 
     private String buildSystemPrompt() {
+        String learnedRules = selfImprovement.getTopRulesForPrompt();
         return """
             You are Weaver, an autonomous coding agent. You help developers by reading code, writing files, \
             running commands, searching the web, and finding solutions on Stack Overflow.
@@ -584,6 +630,7 @@ public class WeaverAgent {
             - Do NOT provide usage instructions unless explicitly asked.
             - NEVER say things like "This code will create..." or "You can replace the console.log line with..."
             - Maximum final response: 2-3 short sentences. Save tokens.
+            """ + learnedRules + """
 
             WORKSPACE:
             - Current working directory: """ + config.getWorkspaceRoot() + "\n" + """

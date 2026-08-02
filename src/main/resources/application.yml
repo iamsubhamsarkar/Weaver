@@ -24,6 +24,11 @@ weaver:
 
   # AI Provider Configuration (add your API keys here or in configs/application-local.yml)
   providers:
+    # TIER 1: NVIDIA NIM (frontier models, free, GPU-hosted)
+    nvidia:
+      api-key: ${NVIDIA_API_KEY:}
+      enabled: true
+    # TIER 2: Free cloud APIs
     groq:
       api-key: ${GROQ_API_KEY:}
       enabled: true
