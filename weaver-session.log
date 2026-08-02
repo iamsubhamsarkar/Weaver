@@ -1,673 +1,141 @@
-2026-08-02 13:04:35.883 [INFO ] o.h.v.i.util.Version - HV000001: Hibernate Validator 8.0.2.Final
-2026-08-02 13:04:37.405 [INFO ] c.w.s.EmbeddingConfig - Loading local ONNX embedding model (AllMiniLmL6V2-Quantized)...
-2026-08-02 13:04:41.797 [INFO ] a.djl.util.Platform - Found matching platform from: jar:nested:/home/bob/Documents/WORKSPACE/Weaver/Weaver/target/weaver-agent-1.0.0-SNAPSHOT.jar/!BOOT-INF/lib/tokenizers-0.31.1.jar!/native/lib/tokenizers.properties
-2026-08-02 13:04:41.995 [INFO ] c.w.agent.LocalBrain - ✓ Task classification embeddings initialized (6 categories × 6 prototypes)
-2026-08-02 13:04:42.211 [INFO ] c.w.agent.LocalBrain - ⚠ MiniCPM5 not found, falling back to Gemma. Run: ollama pull minicpm5:1b-q8_0
-2026-08-02 13:04:42.828 [INFO ] c.w.a.SemanticRouter - ✓ SemanticRouter initialized: 10 categories, 150 total examples, 575ms
-2026-08-02 13:04:43.226 [INFO ] c.w.p.ProviderRegistry - ✓ groq/gpt-oss-20b registered (model: openai/gpt-oss-20b, RPM: 30)
-2026-08-02 13:04:43.422 [INFO ] c.w.p.ProviderRegistry - ✓ groq/llama-3.1-8b registered (model: llama-3.1-8b-instant, RPM: 30)
-2026-08-02 13:04:43.586 [INFO ] c.w.p.ProviderRegistry - ✓ groq/llama-3.3-70b registered (model: llama-3.3-70b-versatile, RPM: 30)
-2026-08-02 13:04:43.767 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/medium-3.5 registered (model: mistral-medium-latest, RPM: 30)
-2026-08-02 13:04:43.914 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/devstral registered (model: devstral-2512, RPM: 30)
-2026-08-02 13:04:44.037 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/small-4 registered (model: mistral-small-latest, RPM: 30)
-2026-08-02 13:04:44.158 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/large-3 registered (model: mistral-large-latest, RPM: 30)
-2026-08-02 13:04:44.284 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-14b registered (model: ministral-14b-2512, RPM: 30)
-2026-08-02 13:04:44.404 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-8b registered (model: ministral-8b-2512, RPM: 30)
-2026-08-02 13:04:44.592 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-3b registered (model: ministral-3b-2512, RPM: 30)
-2026-08-02 13:04:44.619 [INFO ] c.w.p.ProviderRegistry - ✓ gemini/flash registered (gemini-2.0-flash, RPM: 15)
-2026-08-02 13:04:44.709 [INFO ] c.w.p.ProviderRegistry - ✓ cerebras/gemma-4-31b registered (model: gemma-4-31b, RPM: 30)
-2026-08-02 13:04:44.798 [INFO ] c.w.p.ProviderRegistry - ✓ openrouter/nemotron-120b registered (model: nvidia/nemotron-3-super-120b-a12b:free, RPM: 20)
-2026-08-02 13:04:44.798 [INFO ] c.w.p.ProviderRegistry - Registered 13 AI model entries across providers
-2026-08-02 13:04:45.028 [WARN ] c.w.s.EmbeddingConfig - ChromaDB not available at http://localhost:8000. Semantic cache disabled.
-2026-08-02 13:04:45.079 [INFO ] c.w.c.OsDetector - OS detected: LINUX | Shell: /bin/sh -c
-2026-08-02 13:04:45.115 [INFO ] c.w.a.WeaverAgent - WeaverAgent initialized with 11 tools
-2026-08-02 13:04:46.172 [INFO ] c.w.cli.WeaverCli - ╔══════════════════════════════════════════════════════════════╗
-2026-08-02 13:04:46.173 [INFO ] c.w.cli.WeaverCli - ║  WEAVER SESSION STARTED                                     ║
-2026-08-02 13:04:46.173 [INFO ] c.w.cli.WeaverCli - ║  Session ID: 327afa09                                        ║
-2026-08-02 13:04:46.173 [INFO ] c.w.cli.WeaverCli - ║  Workspace: /home/bob/Documents/WORKSPACE/testSite
-2026-08-02 13:04:46.173 [INFO ] c.w.cli.WeaverCli - ╚══════════════════════════════════════════════════════════════╝
-2026-08-02 13:04:53.292 [INFO ] c.w.cli.WeaverCli - RAW INPUT RECEIVED: '/help'
-2026-08-02 13:04:53.293 [INFO ] c.w.cli.WeaverCli - COMMAND: '/help'
-2026-08-02 13:05:03.211 [INFO ] c.w.cli.WeaverCli - RAW INPUT RECEIVED: '/configure'
-2026-08-02 13:05:03.211 [INFO ] c.w.cli.WeaverCli - COMMAND: '/configure'
-2026-08-02 13:06:48.527 [INFO ] c.w.cli.SetupWizard - Credentials saved to /home/bob/.weaver/credentials.yml
-2026-08-02 13:10:19.214 [INFO ] o.h.v.i.util.Version - HV000001: Hibernate Validator 8.0.2.Final
-2026-08-02 13:10:20.617 [INFO ] c.w.s.EmbeddingConfig - Loading local ONNX embedding model (AllMiniLmL6V2-Quantized)...
-2026-08-02 13:10:25.003 [INFO ] a.djl.util.Platform - Found matching platform from: jar:nested:/home/bob/Documents/WORKSPACE/Weaver/Weaver/target/weaver-agent-1.0.0-SNAPSHOT.jar/!BOOT-INF/lib/tokenizers-0.31.1.jar!/native/lib/tokenizers.properties
-2026-08-02 13:10:25.115 [INFO ] c.w.agent.LocalBrain - ✓ Task classification embeddings initialized (6 categories × 6 prototypes)
-2026-08-02 13:10:25.262 [INFO ] c.w.agent.LocalBrain - ⚠ MiniCPM5 not found, falling back to Gemma. Run: ollama pull minicpm5:1b-q8_0
-2026-08-02 13:10:25.687 [INFO ] c.w.a.SemanticRouter - ✓ SemanticRouter initialized: 10 categories, 150 total examples, 403ms
-2026-08-02 13:10:26.018 [INFO ] c.w.p.ProviderRegistry - ✓ groq/gpt-oss-20b registered (model: openai/gpt-oss-20b, RPM: 30)
-2026-08-02 13:10:26.206 [INFO ] c.w.p.ProviderRegistry - ✓ groq/llama-3.1-8b registered (model: llama-3.1-8b-instant, RPM: 30)
-2026-08-02 13:10:26.341 [INFO ] c.w.p.ProviderRegistry - ✓ groq/llama-3.3-70b registered (model: llama-3.3-70b-versatile, RPM: 30)
-2026-08-02 13:10:26.497 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/medium-3.5 registered (model: mistral-medium-latest, RPM: 30)
-2026-08-02 13:10:26.602 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/devstral registered (model: devstral-2512, RPM: 30)
-2026-08-02 13:10:26.735 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/small-4 registered (model: mistral-small-latest, RPM: 30)
-2026-08-02 13:10:26.841 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/large-3 registered (model: mistral-large-latest, RPM: 30)
-2026-08-02 13:10:26.954 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-14b registered (model: ministral-14b-2512, RPM: 30)
-2026-08-02 13:10:27.063 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-8b registered (model: ministral-8b-2512, RPM: 30)
-2026-08-02 13:10:27.170 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-3b registered (model: ministral-3b-2512, RPM: 30)
-2026-08-02 13:10:27.197 [INFO ] c.w.p.ProviderRegistry - ✓ gemini/flash registered (gemini-2.0-flash, RPM: 15)
-2026-08-02 13:10:27.372 [INFO ] c.w.p.ProviderRegistry - ✓ cerebras/gemma-4-31b registered (model: gemma-4-31b, RPM: 30)
-2026-08-02 13:10:27.447 [INFO ] c.w.p.ProviderRegistry - ✓ openrouter/nemotron-120b registered (model: nvidia/nemotron-3-super-120b-a12b:free, RPM: 20)
-2026-08-02 13:10:27.447 [INFO ] c.w.p.ProviderRegistry - Registered 13 AI model entries across providers
-2026-08-02 13:10:27.556 [WARN ] c.w.s.EmbeddingConfig - ChromaDB not available at http://localhost:8000. Semantic cache disabled.
-2026-08-02 13:10:27.586 [INFO ] c.w.c.OsDetector - OS detected: LINUX | Shell: /bin/sh -c
-2026-08-02 13:10:27.607 [INFO ] c.w.a.WeaverAgent - WeaverAgent initialized with 11 tools
-2026-08-02 13:10:28.946 [INFO ] c.w.cli.WeaverCli - ╔══════════════════════════════════════════════════════════════╗
-2026-08-02 13:10:28.946 [INFO ] c.w.cli.WeaverCli - ║  WEAVER SESSION STARTED                                     ║
-2026-08-02 13:10:28.946 [INFO ] c.w.cli.WeaverCli - ║  Session ID: d6b88bae                                        ║
-2026-08-02 13:10:28.947 [INFO ] c.w.cli.WeaverCli - ║  Workspace: /home/bob/Documents/WORKSPACE/testSite
-2026-08-02 13:10:28.947 [INFO ] c.w.cli.WeaverCli - ╚══════════════════════════════════════════════════════════════╝
-2026-08-02 13:10:46.700 [INFO ] c.w.cli.WeaverCli - RAW INPUT RECEIVED: 'hi'
-2026-08-02 13:10:46.700 [INFO ] c.w.cli.WeaverCli - ────────────────────────────────────────────────────
-2026-08-02 13:10:46.700 [INFO ] c.w.cli.WeaverCli - EXECUTING TASK: 'hi'
-2026-08-02 13:10:46.700 [INFO ] c.w.a.WeaverAgent - ════════════════════════════════════════════════════════════
-2026-08-02 13:10:46.701 [INFO ] c.w.a.WeaverAgent - NEW TASK: 'hi'
-2026-08-02 13:10:46.701 [INFO ] c.w.a.WeaverAgent - Session: d6b88bae, Workspace: /home/bob/Documents/WORKSPACE/testSite
-2026-08-02 13:10:46.701 [INFO ] c.w.a.WeaverAgent - ════════════════════════════════════════════════════════════
-2026-08-02 13:10:46.701 [INFO ] c.w.a.WeaverAgent - Layer 1: Checking semantic cache...
-2026-08-02 13:10:46.709 [INFO ] c.w.a.WeaverAgent - Cache MISS. No matching solution found.
-2026-08-02 13:10:46.709 [INFO ] c.w.a.WeaverAgent - Layer 2: Checking skill library (0 skills loaded)...
-2026-08-02 13:10:46.709 [INFO ] c.w.a.WeaverAgent - No skill match.
-2026-08-02 13:10:46.725 [INFO ] c.w.a.SemanticRouter -   [SemanticRouter] Classification in 8ms: best=SIMPLE_CODE (0.299), second=EXPLAIN (0.215)
-2026-08-02 13:10:46.726 [INFO ] c.w.a.SemanticRouter -   [SemanticRouter] Low confidence (0.29870946819783) or ambiguous. Deferring to MiniCPM5.
-2026-08-02 13:10:46.729 [INFO ] c.w.a.WeaverAgent - Layer 3: Route=SIMPLE_CODE (confidence=0.299, complexity=SIMPLE, tier=any), Tools selected=8/11
-2026-08-02 13:10:46.729 [INFO ] c.w.a.WeaverAgent -   Selected tools: [writeFile, editFile, readFileLines, listDirectory, searchFiles, readFile, run, webSearch]
-2026-08-02 13:10:46.729 [INFO ] c.w.a.WeaverAgent - Layer 4: Pre-search check (taskType=CODE_GENERATION)
-2026-08-02 13:10:46.732 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Classification scores: {CODE_GENERATION=0.07289011422526882, FILE_READ=0.11332062954949265, BUG_FIX=0.08717162611968635, EXPLAIN=0.2148225136133069, SHELL_COMMAND=0.16554494379073656, SEARCH=0.04187475134155904}
-2026-08-02 13:10:46.732 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Best=EXPLAIN (score=0.215), threshold=0.15 → result=EXPLAIN
-2026-08-02 13:10:46.732 [INFO ] c.w.a.WeaverAgent - Pre-search returned nothing or skipped.
-2026-08-02 13:10:46.733 [INFO ] c.w.a.WeaverAgent - Layer 5: Strategy=REACT, Provider=groq/gpt-oss-20b
-2026-08-02 13:10:46.733 [INFO ] c.w.a.WeaverAgent - Skipping Plan (task type CODE_GENERATION uses ReAct directly)
-2026-08-02 13:10:46.734 [INFO ] c.w.a.WeaverAgent - Layer 6: ReAct starting with provider=groq/gpt-oss-20b
-2026-08-02 13:10:46.738 [INFO ] c.w.a.WeaverAgent - ReAct Step 1/15 [provider=groq/gpt-oss-20b]
-2026-08-02 13:10:46.738 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 2 (types: [SystemMessage, UserMessage])
-2026-08-02 13:10:46.739 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 574, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:10:46.739 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:10:47.401 [INFO ] c.w.a.WeaverAgent - Task COMPLETE. Final response (32 chars): Hello! How can I help you today?
-2026-08-02 13:10:47.401 [DEBUG] c.w.p.ProviderRegistry - Provider groq/gpt-oss-20b succeeded
-2026-08-02 13:10:47.401 [INFO ] c.w.agent.LocalBrain -   [Gate] validateOutput: tool=response, minicpmAvailable=true
-2026-08-02 13:10:47.401 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:10:47.401 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Did this tool execution succeed for the task? Answer ONLY 'YES' or 'NO'.
-Task: hi
-Tool: response
-Result: Hello! How can I help you today?
-2026-08-02 13:10:47.406 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 5ms
-2026-08-02 13:10:47.406 [INFO ] c.w.agent.LocalBrain -   [Gate] → PASS (MiniCPM5 returned null)
-2026-08-02 13:10:47.408 [INFO ] c.w.s.ExperienceLibraryService - Stored solution in experience library
-2026-08-02 13:10:47.412 [INFO ] c.w.a.SelfImprovementSystem -   [SelfImprovement] Recording success: category=SIMPLE_CODE, prompt='hi'
-2026-08-02 13:10:47.527 [INFO ] c.w.cli.WeaverCli - TASK COMPLETED in 827ms. Response length: 32 chars
-2026-08-02 13:10:47.528 [INFO ] c.w.cli.WeaverCli - TASK HANDLER RETURNED. Ready for next input.
-2026-08-02 13:11:19.398 [INFO ] c.w.cli.WeaverCli - RAW INPUT RECEIVED: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
-2026-08-02 13:11:19.398 [INFO ] c.w.cli.WeaverCli - ────────────────────────────────────────────────────
-2026-08-02 13:11:19.398 [INFO ] c.w.cli.WeaverCli - EXECUTING TASK: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
-2026-08-02 13:11:19.398 [INFO ] c.w.a.WeaverAgent - ════════════════════════════════════════════════════════════
-2026-08-02 13:11:19.399 [INFO ] c.w.a.WeaverAgent - NEW TASK: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
-2026-08-02 13:11:19.399 [INFO ] c.w.a.WeaverAgent - Session: d6b88bae, Workspace: /home/bob/Documents/WORKSPACE/testSite
-2026-08-02 13:11:19.399 [INFO ] c.w.a.WeaverAgent - ════════════════════════════════════════════════════════════
-2026-08-02 13:11:19.399 [INFO ] c.w.a.WeaverAgent - Layer 1: Checking semantic cache...
-2026-08-02 13:11:19.405 [INFO ] c.w.a.WeaverAgent - Cache MISS. No matching solution found.
-2026-08-02 13:11:19.405 [INFO ] c.w.a.WeaverAgent - Layer 2: Checking skill library (0 skills loaded)...
-2026-08-02 13:11:19.405 [INFO ] c.w.a.WeaverAgent - No skill match.
-2026-08-02 13:11:19.410 [INFO ] c.w.a.SemanticRouter -   [SemanticRouter] Classification in 5ms: best=SIMPLE_CODE (0.387), second=FILE_READ (0.379)
-2026-08-02 13:11:19.410 [INFO ] c.w.a.SemanticRouter -   [SemanticRouter] Low confidence (0.38702097086161136) or ambiguous. Deferring to MiniCPM5.
-2026-08-02 13:11:19.419 [INFO ] c.w.a.WeaverAgent - Layer 3: Route=SIMPLE_CODE (confidence=0.387, complexity=MODERATE, tier=tier2), Tools selected=8/11
-2026-08-02 13:11:19.419 [INFO ] c.w.a.WeaverAgent -   Selected tools: [writeFile, editFile, readFileLines, listDirectory, searchFiles, readFile, run, webSearch]
-2026-08-02 13:11:19.419 [INFO ] c.w.a.WeaverAgent - Layer 4: Pre-search check (taskType=CODE_GENERATION)
-2026-08-02 13:11:19.422 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Classification scores: {CODE_GENERATION=0.38686950474565357, FILE_READ=0.24171890003348176, BUG_FIX=0.19381305659296832, EXPLAIN=0.14173670239507238, SHELL_COMMAND=0.2644749009408382, SEARCH=0.18262361496969243}
-2026-08-02 13:11:19.422 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Best=CODE_GENERATION (score=0.387), threshold=0.15 → result=CODE_GENERATION
-2026-08-02 13:11:19.422 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:11:19.422 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Extract a concise web search query from this request. Output ONLY the search query, nothing else:
+2026-08-02 13:32:28.570 [INFO ] o.h.v.i.util.Version - HV000001: Hibernate Validator 8.0.2.Final
+2026-08-02 13:32:29.909 [INFO ] c.w.s.EmbeddingConfig - Loading local ONNX embedding model (AllMiniLmL6V2-Quantized)...
+2026-08-02 13:32:34.269 [INFO ] a.djl.util.Platform - Found matching platform from: jar:nested:/home/bob/Documents/WORKSPACE/Weaver/Weaver/target/weaver-agent-1.0.0-SNAPSHOT.jar/!BOOT-INF/lib/tokenizers-0.31.1.jar!/native/lib/tokenizers.properties
+2026-08-02 13:32:34.444 [INFO ] c.w.agent.LocalBrain - ✓ Task classification embeddings initialized (6 categories × 6 prototypes)
+2026-08-02 13:32:34.605 [INFO ] c.w.agent.LocalBrain - ⚠ MiniCPM5 not found, falling back to Gemma. Run: ollama pull minicpm5:1b-q8_0
+2026-08-02 13:32:35.024 [INFO ] c.w.a.SemanticRouter - ✓ SemanticRouter initialized: 10 categories, 150 total examples, 397ms
+2026-08-02 13:32:35.371 [INFO ] c.w.p.ProviderRegistry - ✓ nim/deepseek-v4-flash registered [TIER 1 NIM] (model: deepseek-ai/deepseek-v4-flash, RPM: 40)
+2026-08-02 13:32:35.566 [INFO ] c.w.p.ProviderRegistry - ✓ nim/nemotron-super-49b registered [TIER 1 NIM] (model: nvidia/llama-3.3-nemotron-super-49b-v1.5, RPM: 40)
+2026-08-02 13:32:35.700 [INFO ] c.w.p.ProviderRegistry - ✓ nim/qwen3-coder-480b registered [TIER 1 NIM] (model: qwen/qwen3-coder-480b-a35b-instruct, RPM: 40)
+2026-08-02 13:32:35.860 [INFO ] c.w.p.ProviderRegistry - ✓ nim/nemotron-super-120b registered [TIER 1 NIM] (model: nvidia/nemotron-3-super-120b-a12b, RPM: 40)
+2026-08-02 13:32:35.970 [INFO ] c.w.p.ProviderRegistry - ✓ groq/gpt-oss-20b registered (model: openai/gpt-oss-20b, RPM: 30)
+2026-08-02 13:32:36.111 [INFO ] c.w.p.ProviderRegistry - ✓ groq/llama-3.1-8b registered (model: llama-3.1-8b-instant, RPM: 30)
+2026-08-02 13:32:36.222 [INFO ] c.w.p.ProviderRegistry - ✓ groq/llama-3.3-70b registered (model: llama-3.3-70b-versatile, RPM: 30)
+2026-08-02 13:32:36.338 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/medium-3.5 registered (model: mistral-medium-latest, RPM: 30)
+2026-08-02 13:32:36.522 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/devstral registered (model: devstral-2512, RPM: 30)
+2026-08-02 13:32:36.637 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/small-4 registered (model: mistral-small-latest, RPM: 30)
+2026-08-02 13:32:36.728 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/large-3 registered (model: mistral-large-latest, RPM: 30)
+2026-08-02 13:32:36.884 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-14b registered (model: ministral-14b-2512, RPM: 30)
+2026-08-02 13:32:36.966 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-8b registered (model: ministral-8b-2512, RPM: 30)
+2026-08-02 13:32:37.127 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-3b registered (model: ministral-3b-2512, RPM: 30)
+2026-08-02 13:32:37.160 [INFO ] c.w.p.ProviderRegistry - ✓ gemini/flash registered (gemini-2.0-flash, RPM: 15)
+2026-08-02 13:32:37.275 [INFO ] c.w.p.ProviderRegistry - ✓ cerebras/gemma-4-31b registered (model: gemma-4-31b, RPM: 30)
+2026-08-02 13:32:37.437 [INFO ] c.w.p.ProviderRegistry - ✓ openrouter/nemotron-120b registered (model: nvidia/nemotron-3-super-120b-a12b:free, RPM: 20)
+2026-08-02 13:32:37.437 [INFO ] c.w.p.ProviderRegistry - Registered 17 AI model entries across providers
+2026-08-02 13:32:37.566 [WARN ] c.w.s.EmbeddingConfig - ChromaDB not available at http://localhost:8000. Semantic cache disabled.
+2026-08-02 13:32:37.597 [INFO ] c.w.c.OsDetector - OS detected: LINUX | Shell: /bin/sh -c
+2026-08-02 13:32:37.618 [INFO ] c.w.a.WeaverAgent - WeaverAgent initialized with 11 tools
+2026-08-02 13:32:38.775 [INFO ] c.w.cli.WeaverCli - ╔══════════════════════════════════════════════════════════════╗
+2026-08-02 13:32:38.775 [INFO ] c.w.cli.WeaverCli - ║  WEAVER SESSION STARTED                                     ║
+2026-08-02 13:32:38.775 [INFO ] c.w.cli.WeaverCli - ║  Session ID: 86e03709                                        ║
+2026-08-02 13:32:38.775 [INFO ] c.w.cli.WeaverCli - ║  Workspace: /home/bob/Documents/WORKSPACE/testSite
+2026-08-02 13:32:38.775 [INFO ] c.w.cli.WeaverCli - ╚══════════════════════════════════════════════════════════════╝
+2026-08-02 13:32:41.887 [INFO ] c.w.cli.WeaverCli - RAW INPUT RECEIVED: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
+2026-08-02 13:32:41.887 [INFO ] c.w.cli.WeaverCli - ────────────────────────────────────────────────────
+2026-08-02 13:32:41.888 [INFO ] c.w.cli.WeaverCli - EXECUTING TASK: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
+2026-08-02 13:32:41.888 [INFO ] c.w.a.WeaverAgent - ════════════════════════════════════════════════════════════
+2026-08-02 13:32:41.888 [INFO ] c.w.a.WeaverAgent - NEW TASK: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
+2026-08-02 13:32:41.888 [INFO ] c.w.a.WeaverAgent - Session: 86e03709, Workspace: /home/bob/Documents/WORKSPACE/testSite
+2026-08-02 13:32:41.888 [INFO ] c.w.a.WeaverAgent - ════════════════════════════════════════════════════════════
+2026-08-02 13:32:41.889 [INFO ] c.w.a.WeaverAgent - Layer 1: Checking semantic cache...
+2026-08-02 13:32:41.901 [INFO ] c.w.a.WeaverAgent - Cache MISS. No matching solution found.
+2026-08-02 13:32:41.901 [INFO ] c.w.a.WeaverAgent - Layer 2: Checking skill library (0 skills loaded)...
+2026-08-02 13:32:41.901 [INFO ] c.w.a.WeaverAgent - No skill match.
+2026-08-02 13:32:41.913 [INFO ] c.w.a.SemanticRouter -   [SemanticRouter] Classification in 11ms: best=SIMPLE_CODE (0.387), second=FILE_READ (0.379)
+2026-08-02 13:32:41.913 [INFO ] c.w.a.SemanticRouter -   [SemanticRouter] Low confidence (0.38702097086161136) or ambiguous. Deferring to MiniCPM5.
+2026-08-02 13:32:41.915 [INFO ] c.w.a.WeaverAgent - Layer 3: Route=SIMPLE_CODE (confidence=0.387, complexity=MODERATE, tier=tier2), Tools selected=8/11
+2026-08-02 13:32:41.915 [INFO ] c.w.a.WeaverAgent -   Selected tools: [writeFile, editFile, readFile, readFileLines, listDirectory, searchFiles, run, webSearch]
+2026-08-02 13:32:41.915 [INFO ] c.w.a.WeaverAgent - Layer 4: Pre-search check (taskType=CODE_GENERATION)
+2026-08-02 13:32:41.920 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Classification scores: {CODE_GENERATION=0.38686950474565357, FILE_READ=0.24171890003348176, BUG_FIX=0.19381305659296832, EXPLAIN=0.14173670239507238, SHELL_COMMAND=0.2644749009408382, SEARCH=0.18262361496969243}
+2026-08-02 13:32:41.921 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Best=CODE_GENERATION (score=0.387), threshold=0.15 → result=CODE_GENERATION
+2026-08-02 13:32:41.921 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
+2026-08-02 13:32:41.921 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Extract a concise web search query from this request. Output ONLY the search query, nothing else:
 read /home/bob/Documents/WORKSPACE/testSite/tasklist...
-2026-08-02 13:11:19.426 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 4ms
-2026-08-02 13:11:19.431 [INFO ] c.w.t.WebSearchTool - Web search: 'login page login example code 2024'
-2026-08-02 13:11:19.658 [INFO ] c.w.a.WeaverAgent - Pre-search returned nothing or skipped.
-2026-08-02 13:11:19.658 [INFO ] c.w.a.WeaverAgent - Layer 5: Strategy=REACT, Provider=groq/gpt-oss-20b
-2026-08-02 13:11:19.658 [INFO ] c.w.a.WeaverAgent - Skipping Plan (task type CODE_GENERATION uses ReAct directly)
-2026-08-02 13:11:19.658 [INFO ] c.w.a.WeaverAgent - Layer 6: ReAct starting with provider=groq/gpt-oss-20b
-2026-08-02 13:11:19.658 [INFO ] c.w.a.WeaverAgent - ReAct Step 1/15 [provider=groq/gpt-oss-20b]
-2026-08-02 13:11:19.659 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 5 (types: [SystemMessage, SystemMessage, UserMessage, AiMessage, UserMessage])
-2026-08-02 13:11:19.659 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 1183, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:11:19.659 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:11:20.202 [INFO ] c.w.a.WeaverAgent - Tool call: readFile({"path":"tasklist.md"})
-2026-08-02 13:11:20.203 [INFO ] c.w.agent.LocalBrain -   [Gate] validateToolCall: tool=readFile, minicpmAvailable=true
-2026-08-02 13:11:20.205 [INFO ] c.w.t.CodebaseTools - 📄 Read file: /home/bob/Documents/WORKSPACE/testSite/tasklist.md (4395 chars)
-2026-08-02 13:11:20.205 [INFO ] c.w.a.WeaverAgent - Tool result: 4395 chars, starts with: # TASKLIST: AGENTIC AI CODE GENERATION WORKFLOW ## PROJECT: Interactive Login Page with Dynamic Mess...
-2026-08-02 13:11:20.206 [DEBUG] c.w.p.ProviderRegistry - Provider groq/gpt-oss-20b succeeded
-2026-08-02 13:11:20.206 [INFO ] c.w.a.WeaverAgent - ReAct Step 2/15 [provider=groq/gpt-oss-20b]
-2026-08-02 13:11:20.207 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 7 (types: [SystemMessage, SystemMessage, UserMessage, AiMessage, UserMessage, AiMessage, ToolExecutionResultMessage])
-2026-08-02 13:11:20.207 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 2446, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:11:20.207 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:11:21.428 [INFO ] c.w.a.WeaverAgent - Tool call: writeFile({"content":"\u003c!DOCTYPE html\u003e\n\u003chtml lang=\"en\"\u003e\n\u003chead\u003e\n\u003cmeta charset=\"UTF-8\"\u003e\n\u003cmeta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\...)
-2026-08-02 13:11:21.429 [INFO ] c.w.agent.LocalBrain -   [Gate] validateToolCall: tool=writeFile, minicpmAvailable=true
-2026-08-02 13:11:21.429 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:11:21.429 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Is this tool call safe and correct for the task? Answer ONLY 'YES' or 'NO'.
+2026-08-02 13:32:41.933 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 12ms
+2026-08-02 13:32:41.940 [INFO ] c.w.t.WebSearchTool - Web search: 'login page login example code 2024'
+2026-08-02 13:32:42.246 [INFO ] c.w.a.WeaverAgent - Pre-search returned nothing or skipped.
+2026-08-02 13:32:42.247 [INFO ] c.w.a.WeaverAgent - Layer 5: Strategy=REACT, Provider=nim/deepseek-v4-flash
+2026-08-02 13:32:42.247 [INFO ] c.w.a.WeaverAgent - Skipping Plan (task type CODE_GENERATION uses ReAct directly)
+2026-08-02 13:32:42.247 [INFO ] c.w.a.WeaverAgent - Layer 6: ReAct starting with provider=nim/deepseek-v4-flash
+2026-08-02 13:32:42.248 [INFO ] c.w.a.WeaverAgent - ReAct Step 1/15 [provider=nim/deepseek-v4-flash]
+2026-08-02 13:32:42.249 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 2 (types: [SystemMessage, UserMessage])
+2026-08-02 13:32:42.249 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 596, Budget: 126976, Threshold (60%): 76185
+2026-08-02 13:32:42.249 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
+2026-08-02 13:32:42.987 [ERROR] c.w.a.WeaverAgent - Provider nim/deepseek-v4-flash FAILED: {"message":"Service temporarily overloaded","type":"Overloaded","code":529}
+2026-08-02 13:32:42.988 [DEBUG] c.w.a.WeaverAgent - Full error:
+dev.ai4j.openai4j.OpenAiHttpException: {"message":"Service temporarily overloaded","type":"Overloaded","code":529}
+	at dev.ai4j.openai4j.Utils.toException(Utils.java:8)
+	at dev.ai4j.openai4j.SyncRequestExecutor.execute(SyncRequestExecutor.java:28)
+	at dev.ai4j.openai4j.RequestExecutor.execute(RequestExecutor.java:59)
+	at dev.langchain4j.model.openai.OpenAiChatModel.lambda$doChat$3(OpenAiChatModel.java:233)
+	at dev.langchain4j.internal.RetryUtils$RetryPolicy.withRetry(RetryUtils.java:192)
+	at dev.langchain4j.internal.RetryUtils.withRetry(RetryUtils.java:229)
+	at dev.langchain4j.model.openai.OpenAiChatModel.doChat(OpenAiChatModel.java:232)
+	at dev.langchain4j.model.chat.ChatLanguageModel.chat(ChatLanguageModel.java:58)
+	at com.weaver.agent.WeaverAgent.execute(WeaverAgent.java:304)
+	at com.weaver.cli.WeaverCli.executeTask(WeaverCli.java:145)
+	at com.weaver.cli.WeaverCli.run(WeaverCli.java:125)
+	at org.springframework.boot.SpringApplication.lambda$callRunner$5(SpringApplication.java:788)
+	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)
+	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)
+	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86)
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796)
+	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:787)
+	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
+	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
+	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at com.weaver.WeaverApplication.main(WeaverApplication.java:13)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:102)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:64)
+	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:40)
+2026-08-02 13:32:42.994 [INFO ] c.w.a.WeaverAgent - ReAct Step 2/15 [provider=nim/nemotron-super-49b]
+2026-08-02 13:32:42.995 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 2 (types: [SystemMessage, UserMessage])
+2026-08-02 13:32:42.995 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 596, Budget: 126976, Threshold (60%): 76185
+2026-08-02 13:32:42.995 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
+2026-08-02 13:33:18.945 [INFO ] c.w.a.WeaverAgent - Tool call: readFile({"path": "/home/bob/Documents/WORKSPACE/testSite/tasklist.md"})
+2026-08-02 13:33:18.945 [INFO ] c.w.agent.LocalBrain -   [Gate] validateToolCall: tool=readFile, minicpmAvailable=true
+2026-08-02 13:33:18.949 [INFO ] c.w.t.CodebaseTools - 📄 Read file: /home/bob/Documents/WORKSPACE/testSite/tasklist.md (4395 chars)
+2026-08-02 13:33:18.949 [INFO ] c.w.a.WeaverAgent - Tool result: 4395 chars, starts with: # TASKLIST: AGENTIC AI CODE GENERATION WORKFLOW ## PROJECT: Interactive Login Page with Dynamic Mess...
+2026-08-02 13:33:18.949 [DEBUG] c.w.p.ProviderRegistry - Provider nim/nemotron-super-49b succeeded
+2026-08-02 13:33:18.950 [INFO ] c.w.a.WeaverAgent - ReAct Step 3/15 [provider=nim/nemotron-super-49b]
+2026-08-02 13:33:18.950 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 4 (types: [SystemMessage, UserMessage, AiMessage, ToolExecutionResultMessage])
+2026-08-02 13:33:18.950 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 1859, Budget: 126976, Threshold (60%): 76185
+2026-08-02 13:33:18.950 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
+2026-08-02 13:34:02.452 [INFO ] c.w.a.WeaverAgent - Tool call: writeFile({"path": "/home/bob/Documents/WORKSPACE/testSite/index.html", "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-...)
+2026-08-02 13:34:02.453 [INFO ] c.w.agent.LocalBrain -   [Gate] validateToolCall: tool=writeFile, minicpmAvailable=true
+2026-08-02 13:34:02.453 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
+2026-08-02 13:34:02.453 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Is this tool call safe and correct for the task? Answer ONLY 'YES' or 'NO'.
 Task: read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build th...
-2026-08-02 13:11:21.434 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 5ms
-2026-08-02 13:11:21.434 [INFO ] c.w.agent.LocalBrain -   [Gate] → PASS (MiniCPM5 returned null)
-2026-08-02 13:11:21.435 [INFO ] c.w.t.CodebaseTools - ✍️ Wrote file: /home/bob/Documents/WORKSPACE/testSite/index.html (1965 chars)
-2026-08-02 13:11:21.437 [INFO ] c.w.a.WeaverAgent - Tool result: 87 chars, starts with: Successfully wrote 1965 characters to /home/bob/Documents/WORKSPACE/testSite/index.html
-2026-08-02 13:11:21.438 [DEBUG] c.w.p.ProviderRegistry - Provider groq/gpt-oss-20b succeeded
-2026-08-02 13:11:21.438 [INFO ] c.w.a.WeaverAgent - ReAct Step 3/15 [provider=groq/gpt-oss-20b]
-2026-08-02 13:11:21.438 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 7 (types: [SystemMessage, SystemMessage, UserMessage, AiMessage, ToolExecutionResultMessage, AiMessage, ToolExecutionResultMessage])
-2026-08-02 13:11:21.438 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 2439, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:11:21.438 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:11:22.144 [INFO ] c.w.a.WeaverAgent - Task COMPLETE. Final response (32 chars): Hello! How can I help you today?
-2026-08-02 13:11:22.145 [DEBUG] c.w.p.ProviderRegistry - Provider groq/gpt-oss-20b succeeded
-2026-08-02 13:11:22.145 [INFO ] c.w.agent.LocalBrain -   [Gate] validateOutput: tool=response, minicpmAvailable=true
-2026-08-02 13:11:22.145 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:11:22.145 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Did this tool execution succeed for the task? Answer ONLY 'YES' or 'NO'.
+2026-08-02 13:34:02.459 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 6ms
+2026-08-02 13:34:02.459 [INFO ] c.w.agent.LocalBrain -   [Gate] → PASS (MiniCPM5 returned null)
+2026-08-02 13:34:02.461 [INFO ] c.w.t.CodebaseTools - ✍️ Wrote file: /home/bob/Documents/WORKSPACE/testSite/index.html (3578 chars)
+2026-08-02 13:34:02.463 [INFO ] c.w.a.WeaverAgent - Tool result: 87 chars, starts with: Successfully wrote 3578 characters to /home/bob/Documents/WORKSPACE/testSite/index.html
+2026-08-02 13:34:02.463 [DEBUG] c.w.p.ProviderRegistry - Provider nim/nemotron-super-49b succeeded
+2026-08-02 13:34:02.463 [INFO ] c.w.a.WeaverAgent - ReAct Step 4/15 [provider=nim/nemotron-super-49b]
+2026-08-02 13:34:02.463 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 6 (types: [SystemMessage, UserMessage, AiMessage, ToolExecutionResultMessage, AiMessage, ToolExecutionResultMessage])
+2026-08-02 13:34:02.463 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 1891, Budget: 126976, Threshold (60%): 76185
+2026-08-02 13:34:02.463 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
+2026-08-02 13:34:17.503 [INFO ] c.w.a.WeaverAgent - Task COMPLETE. Final response (101 chars): Done. Created login page with form, gradient background, and dynamic message transition as specified.
+2026-08-02 13:34:17.504 [DEBUG] c.w.p.ProviderRegistry - Provider nim/nemotron-super-49b succeeded
+2026-08-02 13:34:17.504 [INFO ] c.w.agent.LocalBrain -   [Gate] validateOutput: tool=response, minicpmAvailable=true
+2026-08-02 13:34:17.504 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
+2026-08-02 13:34:17.504 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Did this tool execution succeed for the task? Answer ONLY 'YES' or 'NO'.
 Task: read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the l...
-2026-08-02 13:11:22.152 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 7ms
-2026-08-02 13:11:22.152 [INFO ] c.w.agent.LocalBrain -   [Gate] → PASS (MiniCPM5 returned null)
-2026-08-02 13:11:22.159 [INFO ] c.w.s.ExperienceLibraryService - Stored solution in experience library
-2026-08-02 13:11:22.159 [INFO ] c.w.a.SelfImprovementSystem -   [SelfImprovement] Recording success: category=SIMPLE_CODE, prompt='read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and ...'
-2026-08-02 13:11:22.266 [INFO ] c.w.cli.WeaverCli - TASK COMPLETED in 2868ms. Response length: 32 chars
-2026-08-02 13:11:22.267 [INFO ] c.w.cli.WeaverCli - TASK HANDLER RETURNED. Ready for next input.
-2026-08-02 13:13:50.356 [INFO ] o.h.v.i.util.Version - HV000001: Hibernate Validator 8.0.2.Final
-2026-08-02 13:13:51.760 [INFO ] c.w.s.EmbeddingConfig - Loading local ONNX embedding model (AllMiniLmL6V2-Quantized)...
-2026-08-02 13:13:56.133 [INFO ] a.djl.util.Platform - Found matching platform from: jar:nested:/home/bob/Documents/WORKSPACE/Weaver/Weaver/target/weaver-agent-1.0.0-SNAPSHOT.jar/!BOOT-INF/lib/tokenizers-0.31.1.jar!/native/lib/tokenizers.properties
-2026-08-02 13:13:56.291 [INFO ] c.w.agent.LocalBrain - ✓ Task classification embeddings initialized (6 categories × 6 prototypes)
-2026-08-02 13:13:56.445 [INFO ] c.w.agent.LocalBrain - ⚠ MiniCPM5 not found, falling back to Gemma. Run: ollama pull minicpm5:1b-q8_0
-2026-08-02 13:13:56.475 [INFO ] c.w.a.SelfImprovementSystem -   [SelfImprovement] Loaded 2 route examples from disk
-2026-08-02 13:13:56.889 [INFO ] c.w.a.SemanticRouter - ✓ SemanticRouter initialized: 10 categories, 150 total examples, 406ms
-2026-08-02 13:13:57.230 [INFO ] c.w.p.ProviderRegistry - ✓ groq/gpt-oss-20b registered (model: openai/gpt-oss-20b, RPM: 30)
-2026-08-02 13:13:57.417 [INFO ] c.w.p.ProviderRegistry - ✓ groq/llama-3.1-8b registered (model: llama-3.1-8b-instant, RPM: 30)
-2026-08-02 13:13:57.552 [INFO ] c.w.p.ProviderRegistry - ✓ groq/llama-3.3-70b registered (model: llama-3.3-70b-versatile, RPM: 30)
-2026-08-02 13:13:57.716 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/medium-3.5 registered (model: mistral-medium-latest, RPM: 30)
-2026-08-02 13:13:57.826 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/devstral registered (model: devstral-2512, RPM: 30)
-2026-08-02 13:13:57.961 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/small-4 registered (model: mistral-small-latest, RPM: 30)
-2026-08-02 13:13:58.067 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/large-3 registered (model: mistral-large-latest, RPM: 30)
-2026-08-02 13:13:58.181 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-14b registered (model: ministral-14b-2512, RPM: 30)
-2026-08-02 13:13:58.296 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-8b registered (model: ministral-8b-2512, RPM: 30)
-2026-08-02 13:13:58.401 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-3b registered (model: ministral-3b-2512, RPM: 30)
-2026-08-02 13:13:58.516 [INFO ] c.w.p.ProviderRegistry - ✓ gemini/flash registered (gemini-2.0-flash, RPM: 15)
-2026-08-02 13:13:58.607 [INFO ] c.w.p.ProviderRegistry - ✓ cerebras/gemma-4-31b registered (model: gemma-4-31b, RPM: 30)
-2026-08-02 13:13:58.684 [INFO ] c.w.p.ProviderRegistry - ✓ openrouter/nemotron-120b registered (model: nvidia/nemotron-3-super-120b-a12b:free, RPM: 20)
-2026-08-02 13:13:58.684 [INFO ] c.w.p.ProviderRegistry - Registered 13 AI model entries across providers
-2026-08-02 13:13:58.788 [WARN ] c.w.s.EmbeddingConfig - ChromaDB not available at http://localhost:8000. Semantic cache disabled.
-2026-08-02 13:13:58.818 [INFO ] c.w.c.OsDetector - OS detected: LINUX | Shell: /bin/sh -c
-2026-08-02 13:13:58.843 [INFO ] c.w.a.WeaverAgent - WeaverAgent initialized with 11 tools
-2026-08-02 13:14:00.107 [INFO ] c.w.cli.WeaverCli - ╔══════════════════════════════════════════════════════════════╗
-2026-08-02 13:14:00.107 [INFO ] c.w.cli.WeaverCli - ║  WEAVER SESSION STARTED                                     ║
-2026-08-02 13:14:00.108 [INFO ] c.w.cli.WeaverCli - ║  Session ID: 89ab5c8a                                        ║
-2026-08-02 13:14:00.108 [INFO ] c.w.cli.WeaverCli - ║  Workspace: /home/bob/Documents/WORKSPACE/testSite
-2026-08-02 13:14:00.108 [INFO ] c.w.cli.WeaverCli - ╚══════════════════════════════════════════════════════════════╝
-2026-08-02 13:14:12.807 [INFO ] c.w.cli.WeaverCli - RAW INPUT RECEIVED: '/configure'
-2026-08-02 13:14:12.807 [INFO ] c.w.cli.WeaverCli - COMMAND: '/configure'
-2026-08-02 13:15:41.520 [INFO ] o.h.v.i.util.Version - HV000001: Hibernate Validator 8.0.2.Final
-2026-08-02 13:15:43.016 [INFO ] c.w.s.EmbeddingConfig - Loading local ONNX embedding model (AllMiniLmL6V2-Quantized)...
-2026-08-02 13:15:47.425 [INFO ] a.djl.util.Platform - Found matching platform from: jar:nested:/home/bob/Documents/WORKSPACE/Weaver/Weaver/target/weaver-agent-1.0.0-SNAPSHOT.jar/!BOOT-INF/lib/tokenizers-0.31.1.jar!/native/lib/tokenizers.properties
-2026-08-02 13:15:47.595 [INFO ] c.w.agent.LocalBrain - ✓ Task classification embeddings initialized (6 categories × 6 prototypes)
-2026-08-02 13:15:47.763 [INFO ] c.w.agent.LocalBrain - ⚠ MiniCPM5 not found, falling back to Gemma. Run: ollama pull minicpm5:1b-q8_0
-2026-08-02 13:15:47.798 [INFO ] c.w.a.SelfImprovementSystem -   [SelfImprovement] Loaded 2 route examples from disk
-2026-08-02 13:15:48.132 [INFO ] c.w.a.SemanticRouter - ✓ SemanticRouter initialized: 10 categories, 150 total examples, 322ms
-2026-08-02 13:15:48.509 [INFO ] c.w.p.ProviderRegistry - ✓ nim/nemotron-ultra-253b registered [TIER 1 NIM] (model: nvidia/llama-3.1-nemotron-ultra-253b-v1, RPM: 40)
-2026-08-02 13:15:48.713 [INFO ] c.w.p.ProviderRegistry - ✓ nim/nemotron-super-49b registered [TIER 1 NIM] (model: nvidia/llama-3.3-nemotron-super-49b-v1.5, RPM: 40)
-2026-08-02 13:15:48.845 [INFO ] c.w.p.ProviderRegistry - ✓ nim/nemotron-super-120b registered [TIER 1 NIM] (model: nvidia/nemotron-3-super-120b-a12b, RPM: 40)
-2026-08-02 13:15:48.989 [INFO ] c.w.p.ProviderRegistry - ✓ nim/deepseek-v4-flash registered [TIER 1 NIM] (model: deepseek-ai/deepseek-v4-flash, RPM: 40)
-2026-08-02 13:15:49.131 [INFO ] c.w.p.ProviderRegistry - ✓ nim/qwen3-coder-480b registered [TIER 1 NIM] (model: qwen/qwen3-coder-480b-a35b-instruct, RPM: 40)
-2026-08-02 13:15:49.274 [INFO ] c.w.p.ProviderRegistry - ✓ groq/gpt-oss-20b registered (model: openai/gpt-oss-20b, RPM: 30)
-2026-08-02 13:15:49.418 [INFO ] c.w.p.ProviderRegistry - ✓ groq/llama-3.1-8b registered (model: llama-3.1-8b-instant, RPM: 30)
-2026-08-02 13:15:49.577 [INFO ] c.w.p.ProviderRegistry - ✓ groq/llama-3.3-70b registered (model: llama-3.3-70b-versatile, RPM: 30)
-2026-08-02 13:15:49.691 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/medium-3.5 registered (model: mistral-medium-latest, RPM: 30)
-2026-08-02 13:15:49.802 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/devstral registered (model: devstral-2512, RPM: 30)
-2026-08-02 13:15:49.910 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/small-4 registered (model: mistral-small-latest, RPM: 30)
-2026-08-02 13:15:50.019 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/large-3 registered (model: mistral-large-latest, RPM: 30)
-2026-08-02 13:15:50.247 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-14b registered (model: ministral-14b-2512, RPM: 30)
-2026-08-02 13:15:50.335 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-8b registered (model: ministral-8b-2512, RPM: 30)
-2026-08-02 13:15:50.424 [INFO ] c.w.p.ProviderRegistry - ✓ mistral/ministral-3b registered (model: ministral-3b-2512, RPM: 30)
-2026-08-02 13:15:50.448 [INFO ] c.w.p.ProviderRegistry - ✓ gemini/flash registered (gemini-2.0-flash, RPM: 15)
-2026-08-02 13:15:50.666 [INFO ] c.w.p.ProviderRegistry - ✓ cerebras/gemma-4-31b registered (model: gemma-4-31b, RPM: 30)
-2026-08-02 13:15:50.793 [INFO ] c.w.p.ProviderRegistry - ✓ openrouter/nemotron-120b registered (model: nvidia/nemotron-3-super-120b-a12b:free, RPM: 20)
-2026-08-02 13:15:50.794 [INFO ] c.w.p.ProviderRegistry - Registered 18 AI model entries across providers
-2026-08-02 13:15:50.969 [WARN ] c.w.s.EmbeddingConfig - ChromaDB not available at http://localhost:8000. Semantic cache disabled.
-2026-08-02 13:15:51.039 [INFO ] c.w.c.OsDetector - OS detected: LINUX | Shell: /bin/sh -c
-2026-08-02 13:15:51.067 [INFO ] c.w.a.WeaverAgent - WeaverAgent initialized with 11 tools
-2026-08-02 13:15:52.264 [INFO ] c.w.cli.WeaverCli - ╔══════════════════════════════════════════════════════════════╗
-2026-08-02 13:15:52.265 [INFO ] c.w.cli.WeaverCli - ║  WEAVER SESSION STARTED                                     ║
-2026-08-02 13:15:52.265 [INFO ] c.w.cli.WeaverCli - ║  Session ID: 4b1a89bf                                        ║
-2026-08-02 13:15:52.265 [INFO ] c.w.cli.WeaverCli - ║  Workspace: /home/bob/Documents/WORKSPACE/testSite
-2026-08-02 13:15:52.265 [INFO ] c.w.cli.WeaverCli - ╚══════════════════════════════════════════════════════════════╝
-2026-08-02 13:16:31.113 [INFO ] c.w.cli.WeaverCli - RAW INPUT RECEIVED: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
-2026-08-02 13:16:31.114 [INFO ] c.w.cli.WeaverCli - ────────────────────────────────────────────────────
-2026-08-02 13:16:31.114 [INFO ] c.w.cli.WeaverCli - EXECUTING TASK: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
-2026-08-02 13:16:31.114 [INFO ] c.w.a.WeaverAgent - ════════════════════════════════════════════════════════════
-2026-08-02 13:16:31.114 [INFO ] c.w.a.WeaverAgent - NEW TASK: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
-2026-08-02 13:16:31.114 [INFO ] c.w.a.WeaverAgent - Session: 4b1a89bf, Workspace: /home/bob/Documents/WORKSPACE/testSite
-2026-08-02 13:16:31.114 [INFO ] c.w.a.WeaverAgent - ════════════════════════════════════════════════════════════
-2026-08-02 13:16:31.115 [INFO ] c.w.a.WeaverAgent - Layer 1: Checking semantic cache...
-2026-08-02 13:16:31.127 [INFO ] c.w.a.WeaverAgent - Cache MISS. No matching solution found.
-2026-08-02 13:16:31.127 [INFO ] c.w.a.WeaverAgent - Layer 2: Checking skill library (0 skills loaded)...
-2026-08-02 13:16:31.127 [INFO ] c.w.a.WeaverAgent - No skill match.
-2026-08-02 13:16:31.133 [INFO ] c.w.a.SemanticRouter -   [SemanticRouter] Classification in 6ms: best=SIMPLE_CODE (0.387), second=FILE_READ (0.379)
-2026-08-02 13:16:31.134 [INFO ] c.w.a.SemanticRouter -   [SemanticRouter] Low confidence (0.38702097086161136) or ambiguous. Deferring to MiniCPM5.
-2026-08-02 13:16:31.135 [INFO ] c.w.a.WeaverAgent - Layer 3: Route=SIMPLE_CODE (confidence=0.387, complexity=MODERATE, tier=tier2), Tools selected=8/11
-2026-08-02 13:16:31.136 [INFO ] c.w.a.WeaverAgent -   Selected tools: [writeFile, editFile, readFileLines, listDirectory, searchFiles, readFile, run, webSearch]
-2026-08-02 13:16:31.137 [INFO ] c.w.a.WeaverAgent - Layer 4: Pre-search check (taskType=CODE_GENERATION)
-2026-08-02 13:16:31.141 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Classification scores: {CODE_GENERATION=0.38686950474565357, FILE_READ=0.24171890003348176, BUG_FIX=0.19381305659296832, EXPLAIN=0.14173670239507238, SHELL_COMMAND=0.2644749009408382, SEARCH=0.18262361496969243}
-2026-08-02 13:16:31.141 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Best=CODE_GENERATION (score=0.387), threshold=0.15 → result=CODE_GENERATION
-2026-08-02 13:16:31.141 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:16:31.141 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Extract a concise web search query from this request. Output ONLY the search query, nothing else:
-read /home/bob/Documents/WORKSPACE/testSite/tasklist...
-2026-08-02 13:16:31.151 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 10ms
-2026-08-02 13:16:31.155 [INFO ] c.w.t.WebSearchTool - Web search: 'login page login example code 2024'
-2026-08-02 13:16:31.486 [INFO ] c.w.a.WeaverAgent - Pre-search returned nothing or skipped.
-2026-08-02 13:16:31.487 [INFO ] c.w.a.WeaverAgent - Layer 5: Strategy=REACT, Provider=nim/nemotron-ultra-253b
-2026-08-02 13:16:31.487 [INFO ] c.w.a.WeaverAgent - Skipping Plan (task type CODE_GENERATION uses ReAct directly)
-2026-08-02 13:16:31.487 [INFO ] c.w.a.WeaverAgent - Layer 6: ReAct starting with provider=nim/nemotron-ultra-253b
-2026-08-02 13:16:31.488 [INFO ] c.w.a.WeaverAgent - ReAct Step 1/15 [provider=nim/nemotron-ultra-253b]
-2026-08-02 13:16:31.489 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 2 (types: [SystemMessage, UserMessage])
-2026-08-02 13:16:31.489 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 596, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:16:31.489 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:16:31.908 [ERROR] c.w.a.WeaverAgent - Provider nim/nemotron-ultra-253b FAILED: {"status":404,"title":"Not Found","detail":"Function '84bf12ff-edbd-4435-baea-0fa6a7453d2e': Not found for account 'XVtPrj3PDH4MfASlmTC2wv7KIRcJQgGr-j8IdjPbsss'"}
-2026-08-02 13:16:31.908 [DEBUG] c.w.a.WeaverAgent - Full error:
-dev.ai4j.openai4j.OpenAiHttpException: {"status":404,"title":"Not Found","detail":"Function '84bf12ff-edbd-4435-baea-0fa6a7453d2e': Not found for account 'XVtPrj3PDH4MfASlmTC2wv7KIRcJQgGr-j8IdjPbsss'"}
-	at dev.ai4j.openai4j.Utils.toException(Utils.java:8)
-	at dev.ai4j.openai4j.SyncRequestExecutor.execute(SyncRequestExecutor.java:28)
-	at dev.ai4j.openai4j.RequestExecutor.execute(RequestExecutor.java:59)
-	at dev.langchain4j.model.openai.OpenAiChatModel.lambda$doChat$3(OpenAiChatModel.java:233)
-	at dev.langchain4j.internal.RetryUtils$RetryPolicy.withRetry(RetryUtils.java:192)
-	at dev.langchain4j.internal.RetryUtils.withRetry(RetryUtils.java:229)
-	at dev.langchain4j.model.openai.OpenAiChatModel.doChat(OpenAiChatModel.java:232)
-	at dev.langchain4j.model.chat.ChatLanguageModel.chat(ChatLanguageModel.java:58)
-	at com.weaver.agent.WeaverAgent.execute(WeaverAgent.java:304)
-	at com.weaver.cli.WeaverCli.executeTask(WeaverCli.java:145)
-	at com.weaver.cli.WeaverCli.run(WeaverCli.java:125)
-	at org.springframework.boot.SpringApplication.lambda$callRunner$5(SpringApplication.java:788)
-	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)
-	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)
-	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:787)
-	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
-	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357)
-	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510)
-	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
-	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
-	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
-	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
-	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
-	at com.weaver.WeaverApplication.main(WeaverApplication.java:13)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:102)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:64)
-	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:40)
-2026-08-02 13:16:31.924 [INFO ] c.w.a.WeaverAgent - ReAct Step 2/15 [provider=nim/nemotron-super-49b]
-2026-08-02 13:16:31.924 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 2 (types: [SystemMessage, UserMessage])
-2026-08-02 13:16:31.925 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 596, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:16:31.925 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:16:55.777 [INFO ] c.w.a.WeaverAgent - Tool call: readFile({"path": "/home/bob/Documents/WORKSPACE/testSite/tasklist.md"})
-2026-08-02 13:16:55.778 [INFO ] c.w.agent.LocalBrain -   [Gate] validateToolCall: tool=readFile, minicpmAvailable=true
-2026-08-02 13:16:55.779 [INFO ] c.w.t.CodebaseTools - 📄 Read file: /home/bob/Documents/WORKSPACE/testSite/tasklist.md (4395 chars)
-2026-08-02 13:16:55.779 [INFO ] c.w.a.WeaverAgent - Tool result: 4395 chars, starts with: # TASKLIST: AGENTIC AI CODE GENERATION WORKFLOW ## PROJECT: Interactive Login Page with Dynamic Mess...
-2026-08-02 13:16:55.780 [DEBUG] c.w.p.ProviderRegistry - Provider nim/nemotron-super-49b succeeded
-2026-08-02 13:16:55.780 [INFO ] c.w.a.WeaverAgent - ReAct Step 3/15 [provider=nim/nemotron-super-49b]
-2026-08-02 13:16:55.780 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 4 (types: [SystemMessage, UserMessage, AiMessage, ToolExecutionResultMessage])
-2026-08-02 13:16:55.780 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 1859, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:16:55.780 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:18:25.789 [ERROR] c.w.a.WeaverAgent - Provider nim/nemotron-super-49b FAILED: java.lang.RuntimeException: java.io.InterruptedIOException: timeout
-2026-08-02 13:18:25.789 [DEBUG] c.w.a.WeaverAgent - Full error:
-java.lang.RuntimeException: java.lang.RuntimeException: java.io.InterruptedIOException: timeout
-	at dev.langchain4j.internal.RetryUtils$RetryPolicy.withRetry(RetryUtils.java:195)
-	at dev.langchain4j.internal.RetryUtils.withRetry(RetryUtils.java:229)
-	at dev.langchain4j.model.openai.OpenAiChatModel.doChat(OpenAiChatModel.java:232)
-	at dev.langchain4j.model.chat.ChatLanguageModel.chat(ChatLanguageModel.java:58)
-	at com.weaver.agent.WeaverAgent.execute(WeaverAgent.java:304)
-	at com.weaver.cli.WeaverCli.executeTask(WeaverCli.java:145)
-	at com.weaver.cli.WeaverCli.run(WeaverCli.java:125)
-	at org.springframework.boot.SpringApplication.lambda$callRunner$5(SpringApplication.java:788)
-	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)
-	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)
-	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:787)
-	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
-	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357)
-	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510)
-	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
-	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
-	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
-	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
-	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
-	at com.weaver.WeaverApplication.main(WeaverApplication.java:13)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:102)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:64)
-	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:40)
-Caused by: java.lang.RuntimeException: java.io.InterruptedIOException: timeout
-	at dev.ai4j.openai4j.SyncRequestExecutor.execute(SyncRequestExecutor.java:31)
-	at dev.ai4j.openai4j.RequestExecutor.execute(RequestExecutor.java:59)
-	at dev.langchain4j.model.openai.OpenAiChatModel.lambda$doChat$3(OpenAiChatModel.java:233)
-	at dev.langchain4j.internal.RetryUtils$RetryPolicy.withRetry(RetryUtils.java:192)
-	... 31 common frames omitted
-Caused by: java.io.InterruptedIOException: timeout
-	at okhttp3.internal.connection.RealCall.timeoutExit(RealCall.kt:398)
-	at okhttp3.internal.connection.RealCall.callDone(RealCall.kt:360)
-	at okhttp3.internal.connection.RealCall.noMoreExchanges$okhttp(RealCall.kt:325)
-	at okhttp3.internal.connection.RealCall.getResponseWithInterceptorChain$okhttp(RealCall.kt:209)
-	at okhttp3.internal.connection.RealCall.execute(RealCall.kt:154)
-	at retrofit2.OkHttpCall.execute(OkHttpCall.java:204)
-	at dev.ai4j.openai4j.SyncRequestExecutor.execute(SyncRequestExecutor.java:23)
-	... 34 common frames omitted
-Caused by: java.io.IOException: Canceled
-	at okhttp3.internal.http.RetryAndFollowUpInterceptor.intercept(RetryAndFollowUpInterceptor.kt:72)
-	at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109)
-	at dev.ai4j.openai4j.GenericHeaderInjector.intercept(GenericHeaderInjector.java:27)
-	at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109)
-	at dev.ai4j.openai4j.GenericHeaderInjector.intercept(GenericHeaderInjector.java:27)
-	at okhttp3.internal.http.RealInterceptorChain.proceed(RealInterceptorChain.kt:109)
-	at okhttp3.internal.connection.RealCall.getResponseWithInterceptorChain$okhttp(RealCall.kt:201)
-	... 37 common frames omitted
-2026-08-02 13:18:25.791 [INFO ] c.w.a.WeaverAgent - Circuit breaker: skipping nim/nemotron-super-120b (2+ failures from nim)
-2026-08-02 13:18:25.792 [INFO ] c.w.a.WeaverAgent - Circuit breaker: skipping nim/deepseek-v4-flash (2+ failures from nim)
-2026-08-02 13:18:25.792 [INFO ] c.w.a.WeaverAgent - Circuit breaker: skipping nim/qwen3-coder-480b (2+ failures from nim)
-2026-08-02 13:18:25.792 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:18:25.793 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Summarize this readFile output in 1-2 lines. Be extremely concise. Only include information relevant to: read /home/bob/Documents/WORKSPACE/testSite/t...
-2026-08-02 13:18:25.798 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 6ms
-2026-08-02 13:18:25.910 [INFO ] c.w.a.WeaverAgent - ReAct Step 4/15 [provider=groq/gpt-oss-20b]
-2026-08-02 13:18:25.910 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 4 (types: [SystemMessage, UserMessage, AiMessage, UserMessage])
-2026-08-02 13:18:25.911 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 832, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:18:25.911 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:18:26.500 [INFO ] c.w.a.WeaverAgent - Tool call: listDirectory({"path":"./"})
-2026-08-02 13:18:26.500 [INFO ] c.w.agent.LocalBrain -   [Gate] validateToolCall: tool=listDirectory, minicpmAvailable=true
-2026-08-02 13:18:26.503 [INFO ] c.w.t.CodebaseTools - 📁 Listed directory: /home/bob/Documents/WORKSPACE/testSite
-2026-08-02 13:18:26.503 [INFO ] c.w.a.WeaverAgent - Tool result: 94 chars, starts with: /home/bob/Documents/WORKSPACE/testSite/ ├── index.html ├── tasklist.md └── weaver-session.log
-2026-08-02 13:18:26.504 [DEBUG] c.w.p.ProviderRegistry - Provider groq/gpt-oss-20b succeeded
-2026-08-02 13:18:26.504 [INFO ] c.w.a.WeaverAgent - ReAct Step 5/15 [provider=groq/gpt-oss-20b]
-2026-08-02 13:18:26.504 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 6 (types: [SystemMessage, UserMessage, AiMessage, UserMessage, AiMessage, ToolExecutionResultMessage])
-2026-08-02 13:18:26.504 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 866, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:18:26.504 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:18:26.559 [ERROR] c.w.a.WeaverAgent - Provider groq/gpt-oss-20b FAILED: {"error":{"message":"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01kq57jxrpf51a7k2zbqbxtpx2` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 5155, Requested 5240. Please try again in 17.9625s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
-
-2026-08-02 13:18:26.560 [DEBUG] c.w.a.WeaverAgent - Full error:
-dev.ai4j.openai4j.OpenAiHttpException: {"error":{"message":"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01kq57jxrpf51a7k2zbqbxtpx2` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 5155, Requested 5240. Please try again in 17.9625s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
-
-	at dev.ai4j.openai4j.Utils.toException(Utils.java:8)
-	at dev.ai4j.openai4j.SyncRequestExecutor.execute(SyncRequestExecutor.java:28)
-	at dev.ai4j.openai4j.RequestExecutor.execute(RequestExecutor.java:59)
-	at dev.langchain4j.model.openai.OpenAiChatModel.lambda$doChat$3(OpenAiChatModel.java:233)
-	at dev.langchain4j.internal.RetryUtils$RetryPolicy.withRetry(RetryUtils.java:192)
-	at dev.langchain4j.internal.RetryUtils.withRetry(RetryUtils.java:229)
-	at dev.langchain4j.model.openai.OpenAiChatModel.doChat(OpenAiChatModel.java:232)
-	at dev.langchain4j.model.chat.ChatLanguageModel.chat(ChatLanguageModel.java:58)
-	at com.weaver.agent.WeaverAgent.execute(WeaverAgent.java:304)
-	at com.weaver.cli.WeaverCli.executeTask(WeaverCli.java:145)
-	at com.weaver.cli.WeaverCli.run(WeaverCli.java:125)
-	at org.springframework.boot.SpringApplication.lambda$callRunner$5(SpringApplication.java:788)
-	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)
-	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)
-	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:787)
-	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
-	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357)
-	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510)
-	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
-	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
-	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
-	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
-	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
-	at com.weaver.WeaverApplication.main(WeaverApplication.java:13)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:102)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:64)
-	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:40)
-2026-08-02 13:18:26.561 [INFO ] c.w.a.WeaverAgent - TPM limit hit. Waiting 17s and retrying same provider: groq/gpt-oss-20b
-2026-08-02 13:18:45.524 [INFO ] c.w.a.WeaverAgent - ReAct Step 6/15 [provider=groq/gpt-oss-20b]
-2026-08-02 13:18:45.524 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 6 (types: [SystemMessage, UserMessage, AiMessage, UserMessage, AiMessage, ToolExecutionResultMessage])
-2026-08-02 13:18:45.525 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 866, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:18:45.525 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:18:46.054 [INFO ] c.w.a.WeaverAgent - Tool call: readFileLines({"endLine":200,"path":"./index.html","startLine":1})
-2026-08-02 13:18:46.055 [INFO ] c.w.agent.LocalBrain -   [Gate] validateToolCall: tool=readFileLines, minicpmAvailable=true
-2026-08-02 13:18:46.060 [INFO ] c.w.a.WeaverAgent - Tool result: 2322 chars, starts with: 1 | <!DOCTYPE html>    2 | <html lang="en">    3 | <head>    4 | <meta charset="UTF-8">    5 | <meta...
-2026-08-02 13:18:46.060 [DEBUG] c.w.p.ProviderRegistry - Provider groq/gpt-oss-20b succeeded
-2026-08-02 13:18:46.060 [INFO ] c.w.a.WeaverAgent - ReAct Step 7/15 [provider=groq/gpt-oss-20b]
-2026-08-02 13:18:46.060 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 6 (types: [SystemMessage, UserMessage, AiMessage, ToolExecutionResultMessage, AiMessage, ToolExecutionResultMessage])
-2026-08-02 13:18:46.061 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 1301, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:18:46.061 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:18:46.669 [INFO ] c.w.a.WeaverAgent - Tool call: readFile({"path":"./tasklist.md"})
-2026-08-02 13:18:46.670 [INFO ] c.w.agent.LocalBrain -   [Gate] validateToolCall: tool=readFile, minicpmAvailable=true
-2026-08-02 13:18:46.671 [INFO ] c.w.t.CodebaseTools - 📄 Read file: /home/bob/Documents/WORKSPACE/testSite/tasklist.md (4395 chars)
-2026-08-02 13:18:46.671 [INFO ] c.w.a.WeaverAgent - Tool result: 4395 chars, starts with: # TASKLIST: AGENTIC AI CODE GENERATION WORKFLOW ## PROJECT: Interactive Login Page with Dynamic Mess...
-2026-08-02 13:18:46.672 [DEBUG] c.w.p.ProviderRegistry - Provider groq/gpt-oss-20b succeeded
-2026-08-02 13:18:46.672 [INFO ] c.w.a.WeaverAgent - ReAct Step 8/15 [provider=groq/gpt-oss-20b]
-2026-08-02 13:18:46.673 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 7 (types: [SystemMessage, UserMessage, SystemMessage, AiMessage, ToolExecutionResultMessage, AiMessage, ToolExecutionResultMessage])
-2026-08-02 13:18:46.673 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 2547, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:18:46.673 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:18:46.729 [ERROR] c.w.a.WeaverAgent - Provider groq/gpt-oss-20b FAILED: {"error":{"message":"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01kq57jxrpf51a7k2zbqbxtpx2` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 5444, Requested 6815. Please try again in 31.9425s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
-
-2026-08-02 13:18:46.730 [DEBUG] c.w.a.WeaverAgent - Full error:
-dev.ai4j.openai4j.OpenAiHttpException: {"error":{"message":"Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01kq57jxrpf51a7k2zbqbxtpx2` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 5444, Requested 6815. Please try again in 31.9425s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing","type":"tokens","code":"rate_limit_exceeded"}}
-
-	at dev.ai4j.openai4j.Utils.toException(Utils.java:8)
-	at dev.ai4j.openai4j.SyncRequestExecutor.execute(SyncRequestExecutor.java:28)
-	at dev.ai4j.openai4j.RequestExecutor.execute(RequestExecutor.java:59)
-	at dev.langchain4j.model.openai.OpenAiChatModel.lambda$doChat$3(OpenAiChatModel.java:233)
-	at dev.langchain4j.internal.RetryUtils$RetryPolicy.withRetry(RetryUtils.java:192)
-	at dev.langchain4j.internal.RetryUtils.withRetry(RetryUtils.java:229)
-	at dev.langchain4j.model.openai.OpenAiChatModel.doChat(OpenAiChatModel.java:232)
-	at dev.langchain4j.model.chat.ChatLanguageModel.chat(ChatLanguageModel.java:58)
-	at com.weaver.agent.WeaverAgent.execute(WeaverAgent.java:304)
-	at com.weaver.cli.WeaverCli.executeTask(WeaverCli.java:145)
-	at com.weaver.cli.WeaverCli.run(WeaverCli.java:125)
-	at org.springframework.boot.SpringApplication.lambda$callRunner$5(SpringApplication.java:788)
-	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)
-	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)
-	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:787)
-	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
-	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357)
-	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510)
-	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
-	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
-	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
-	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
-	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
-	at com.weaver.WeaverApplication.main(WeaverApplication.java:13)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:102)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:64)
-	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:40)
-2026-08-02 13:18:46.731 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:18:46.732 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Summarize this readFileLines output in 1-2 lines. Be extremely concise. Only include information relevant to: read /home/bob/Documents/WORKSPACE/testS...
-2026-08-02 13:18:46.736 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 5ms
-2026-08-02 13:18:46.837 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:18:46.837 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Summarize this readFile output in 1-2 lines. Be extremely concise. Only include information relevant to: read /home/bob/Documents/WORKSPACE/testSite/t...
-2026-08-02 13:18:46.843 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 7ms
-2026-08-02 13:18:46.952 [INFO ] c.w.a.WeaverAgent - ReAct Step 9/15 [provider=groq/llama-3.1-8b]
-2026-08-02 13:18:46.952 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 6 (types: [SystemMessage, UserMessage, AiMessage, UserMessage, AiMessage, UserMessage])
-2026-08-02 13:18:46.952 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 994, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:18:46.952 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:18:48.001 [INFO ] c.w.a.WeaverAgent - Task COMPLETE. Final response (1442 chars): I called: writeFile({"content":"<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Login Page</title>\n    <link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/...
-2026-08-02 13:18:48.001 [DEBUG] c.w.p.ProviderRegistry - Provider groq/llama-3.1-8b succeeded
-2026-08-02 13:18:48.001 [INFO ] c.w.agent.LocalBrain -   [Gate] validateOutput: tool=response, minicpmAvailable=true
-2026-08-02 13:18:48.002 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:18:48.002 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Did this tool execution succeed for the task? Answer ONLY 'YES' or 'NO'.
-Task: read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the l...
-2026-08-02 13:18:48.007 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 5ms
-2026-08-02 13:18:48.007 [INFO ] c.w.agent.LocalBrain -   [Gate] → PASS (MiniCPM5 returned null)
-2026-08-02 13:18:48.014 [INFO ] c.w.s.ExperienceLibraryService - Stored solution in experience library
-2026-08-02 13:18:48.018 [INFO ] c.w.a.SelfImprovementSystem -   [SelfImprovement] Recording success: category=SIMPLE_CODE, prompt='read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and ...'
-2026-08-02 13:18:52.117 [INFO ] c.w.cli.WeaverCli - TASK COMPLETED in 141003ms. Response length: 1442 chars
-2026-08-02 13:18:52.118 [INFO ] c.w.cli.WeaverCli - TASK HANDLER RETURNED. Ready for next input.
-2026-08-02 13:20:26.058 [INFO ] c.w.cli.WeaverCli - RAW INPUT RECEIVED: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
-2026-08-02 13:20:26.058 [INFO ] c.w.cli.WeaverCli - ────────────────────────────────────────────────────
-2026-08-02 13:20:26.058 [INFO ] c.w.cli.WeaverCli - EXECUTING TASK: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
-2026-08-02 13:20:26.059 [INFO ] c.w.a.WeaverAgent - ════════════════════════════════════════════════════════════
-2026-08-02 13:20:26.059 [INFO ] c.w.a.WeaverAgent - NEW TASK: 'read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the login page'
-2026-08-02 13:20:26.059 [INFO ] c.w.a.WeaverAgent - Session: 4b1a89bf, Workspace: /home/bob/Documents/WORKSPACE/testSite
-2026-08-02 13:20:26.059 [INFO ] c.w.a.WeaverAgent - ════════════════════════════════════════════════════════════
-2026-08-02 13:20:26.059 [INFO ] c.w.a.WeaverAgent - Layer 1: Checking semantic cache...
-2026-08-02 13:20:26.070 [INFO ] c.w.a.WeaverAgent - Cache MISS. No matching solution found.
-2026-08-02 13:20:26.070 [INFO ] c.w.a.WeaverAgent - Layer 2: Checking skill library (0 skills loaded)...
-2026-08-02 13:20:26.070 [INFO ] c.w.a.WeaverAgent - No skill match.
-2026-08-02 13:20:26.076 [INFO ] c.w.a.SemanticRouter -   [SemanticRouter] Classification in 6ms: best=SIMPLE_CODE (0.387), second=FILE_READ (0.379)
-2026-08-02 13:20:26.076 [INFO ] c.w.a.SemanticRouter -   [SemanticRouter] Low confidence (0.38702097086161136) or ambiguous. Deferring to MiniCPM5.
-2026-08-02 13:20:26.076 [INFO ] c.w.a.WeaverAgent - Layer 3: Route=SIMPLE_CODE (confidence=0.387, complexity=MODERATE, tier=tier2), Tools selected=8/11
-2026-08-02 13:20:26.076 [INFO ] c.w.a.WeaverAgent -   Selected tools: [writeFile, editFile, readFileLines, listDirectory, searchFiles, readFile, run, webSearch]
-2026-08-02 13:20:26.076 [INFO ] c.w.a.WeaverAgent - Layer 4: Pre-search check (taskType=CODE_GENERATION)
-2026-08-02 13:20:26.082 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Classification scores: {CODE_GENERATION=0.38686950474565357, FILE_READ=0.24171890003348176, BUG_FIX=0.19381305659296832, EXPLAIN=0.14173670239507238, SHELL_COMMAND=0.2644749009408382, SEARCH=0.18262361496969243}
-2026-08-02 13:20:26.082 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Best=CODE_GENERATION (score=0.387), threshold=0.15 → result=CODE_GENERATION
-2026-08-02 13:20:26.082 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:20:26.082 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Extract a concise web search query from this request. Output ONLY the search query, nothing else:
-read /home/bob/Documents/WORKSPACE/testSite/tasklist...
-2026-08-02 13:20:26.089 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 7ms
-2026-08-02 13:20:26.091 [INFO ] c.w.t.WebSearchTool - Web search: 'login page login example code 2024'
-2026-08-02 13:20:26.237 [INFO ] c.w.a.WeaverAgent - Pre-search returned nothing or skipped.
-2026-08-02 13:20:26.237 [INFO ] c.w.a.WeaverAgent - Layer 5: Strategy=REACT, Provider=nim/nemotron-ultra-253b
-2026-08-02 13:20:26.238 [INFO ] c.w.a.WeaverAgent - Skipping Plan (task type CODE_GENERATION uses ReAct directly)
-2026-08-02 13:20:26.238 [INFO ] c.w.a.WeaverAgent - Layer 6: ReAct starting with provider=nim/nemotron-ultra-253b
-2026-08-02 13:20:26.238 [INFO ] c.w.a.WeaverAgent - ReAct Step 1/15 [provider=nim/nemotron-ultra-253b]
-2026-08-02 13:20:26.238 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 7 (types: [SystemMessage, SystemMessage, UserMessage, AiMessage, UserMessage, AiMessage, UserMessage])
-2026-08-02 13:20:26.238 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 1833, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:20:26.238 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:20:26.312 [ERROR] c.w.a.WeaverAgent - Provider nim/nemotron-ultra-253b FAILED: {"status":404,"title":"Not Found","detail":"Function '84bf12ff-edbd-4435-baea-0fa6a7453d2e': Not found for account 'XVtPrj3PDH4MfASlmTC2wv7KIRcJQgGr-j8IdjPbsss'"}
-2026-08-02 13:20:26.312 [DEBUG] c.w.a.WeaverAgent - Full error:
-dev.ai4j.openai4j.OpenAiHttpException: {"status":404,"title":"Not Found","detail":"Function '84bf12ff-edbd-4435-baea-0fa6a7453d2e': Not found for account 'XVtPrj3PDH4MfASlmTC2wv7KIRcJQgGr-j8IdjPbsss'"}
-	at dev.ai4j.openai4j.Utils.toException(Utils.java:8)
-	at dev.ai4j.openai4j.SyncRequestExecutor.execute(SyncRequestExecutor.java:28)
-	at dev.ai4j.openai4j.RequestExecutor.execute(RequestExecutor.java:59)
-	at dev.langchain4j.model.openai.OpenAiChatModel.lambda$doChat$3(OpenAiChatModel.java:233)
-	at dev.langchain4j.internal.RetryUtils$RetryPolicy.withRetry(RetryUtils.java:192)
-	at dev.langchain4j.internal.RetryUtils.withRetry(RetryUtils.java:229)
-	at dev.langchain4j.model.openai.OpenAiChatModel.doChat(OpenAiChatModel.java:232)
-	at dev.langchain4j.model.chat.ChatLanguageModel.chat(ChatLanguageModel.java:58)
-	at com.weaver.agent.WeaverAgent.execute(WeaverAgent.java:304)
-	at com.weaver.cli.WeaverCli.executeTask(WeaverCli.java:145)
-	at com.weaver.cli.WeaverCli.run(WeaverCli.java:125)
-	at org.springframework.boot.SpringApplication.lambda$callRunner$5(SpringApplication.java:788)
-	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)
-	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)
-	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:787)
-	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
-	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357)
-	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510)
-	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
-	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
-	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
-	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
-	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
-	at com.weaver.WeaverApplication.main(WeaverApplication.java:13)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:102)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:64)
-	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:40)
-2026-08-02 13:20:26.313 [INFO ] c.w.a.WeaverAgent - ReAct Step 2/15 [provider=groq/llama-3.3-70b]
-2026-08-02 13:20:26.314 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 7 (types: [SystemMessage, SystemMessage, UserMessage, AiMessage, UserMessage, AiMessage, UserMessage])
-2026-08-02 13:20:26.314 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 1510, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:20:26.314 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:20:26.718 [ERROR] c.w.a.WeaverAgent - Provider groq/llama-3.3-70b FAILED: {"error":{"message":"Failed to call a function. Please adjust your prompt. See 'failed_generation' for more details.","type":"invalid_request_error","code":"tool_use_failed","failed_generation":"\u003cfunction=listDirectory{\"path\":\"/home/bob/Documents/WORKSPACE/testSite\"}\u003c/function\u003e\n"}}
-
-2026-08-02 13:20:26.718 [DEBUG] c.w.a.WeaverAgent - Full error:
-dev.ai4j.openai4j.OpenAiHttpException: {"error":{"message":"Failed to call a function. Please adjust your prompt. See 'failed_generation' for more details.","type":"invalid_request_error","code":"tool_use_failed","failed_generation":"\u003cfunction=listDirectory{\"path\":\"/home/bob/Documents/WORKSPACE/testSite\"}\u003c/function\u003e\n"}}
-
-	at dev.ai4j.openai4j.Utils.toException(Utils.java:8)
-	at dev.ai4j.openai4j.SyncRequestExecutor.execute(SyncRequestExecutor.java:28)
-	at dev.ai4j.openai4j.RequestExecutor.execute(RequestExecutor.java:59)
-	at dev.langchain4j.model.openai.OpenAiChatModel.lambda$doChat$3(OpenAiChatModel.java:233)
-	at dev.langchain4j.internal.RetryUtils$RetryPolicy.withRetry(RetryUtils.java:192)
-	at dev.langchain4j.internal.RetryUtils.withRetry(RetryUtils.java:229)
-	at dev.langchain4j.model.openai.OpenAiChatModel.doChat(OpenAiChatModel.java:232)
-	at dev.langchain4j.model.chat.ChatLanguageModel.chat(ChatLanguageModel.java:58)
-	at com.weaver.agent.WeaverAgent.execute(WeaverAgent.java:304)
-	at com.weaver.cli.WeaverCli.executeTask(WeaverCli.java:145)
-	at com.weaver.cli.WeaverCli.run(WeaverCli.java:125)
-	at org.springframework.boot.SpringApplication.lambda$callRunner$5(SpringApplication.java:788)
-	at org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)
-	at org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)
-	at org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796)
-	at org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:787)
-	at org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184)
-	at java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357)
-	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510)
-	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
-	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151)
-	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174)
-	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
-	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596)
-	at org.springframework.boot.SpringApplication.callRunners(SpringApplication.java:772)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:325)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
-	at com.weaver.WeaverApplication.main(WeaverApplication.java:13)
-	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:102)
-	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:64)
-	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:40)
-2026-08-02 13:20:26.719 [INFO ] c.w.a.WeaverAgent - ReAct Step 3/15 [provider=mistral/medium-3.5]
-2026-08-02 13:20:26.719 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 7 (types: [SystemMessage, SystemMessage, UserMessage, AiMessage, UserMessage, AiMessage, UserMessage])
-2026-08-02 13:20:26.719 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 1510, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:20:26.720 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:20:27.537 [INFO ] c.w.a.WeaverAgent - Tool call: readFile({"path": "tasklist.md"})
-2026-08-02 13:20:27.538 [INFO ] c.w.agent.LocalBrain -   [Gate] validateToolCall: tool=readFile, minicpmAvailable=true
-2026-08-02 13:20:27.538 [INFO ] c.w.t.CodebaseTools - 📄 Read file: /home/bob/Documents/WORKSPACE/testSite/tasklist.md (4395 chars)
-2026-08-02 13:20:27.538 [INFO ] c.w.a.WeaverAgent - Tool result: 4395 chars, starts with: # TASKLIST: AGENTIC AI CODE GENERATION WORKFLOW ## PROJECT: Interactive Login Page with Dynamic Mess...
-2026-08-02 13:20:27.538 [DEBUG] c.w.p.ProviderRegistry - Provider mistral/medium-3.5 succeeded
-2026-08-02 13:20:27.539 [INFO ] c.w.a.WeaverAgent - ReAct Step 4/15 [provider=mistral/medium-3.5]
-2026-08-02 13:20:27.539 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 7 (types: [SystemMessage, SystemMessage, UserMessage, AiMessage, UserMessage, AiMessage, ToolExecutionResultMessage])
-2026-08-02 13:20:27.539 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 2548, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:20:27.539 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:20:34.089 [INFO ] c.w.a.WeaverAgent - Tool call: writeFile({"path": "index.html", "content": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title...)
-2026-08-02 13:20:34.090 [INFO ] c.w.agent.LocalBrain -   [Gate] validateToolCall: tool=writeFile, minicpmAvailable=true
-2026-08-02 13:20:34.090 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:20:34.090 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Is this tool call safe and correct for the task? Answer ONLY 'YES' or 'NO'.
-Task: read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build th...
-2026-08-02 13:20:34.096 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 6ms
-2026-08-02 13:20:34.097 [INFO ] c.w.agent.LocalBrain -   [Gate] → PASS (MiniCPM5 returned null)
-2026-08-02 13:20:34.098 [INFO ] c.w.t.CodebaseTools - ✍️ Wrote file: /home/bob/Documents/WORKSPACE/testSite/index.html (4078 chars)
-2026-08-02 13:20:34.100 [INFO ] c.w.a.WeaverAgent - Tool result: 87 chars, starts with: Successfully wrote 4078 characters to /home/bob/Documents/WORKSPACE/testSite/index.html
-2026-08-02 13:20:34.100 [DEBUG] c.w.p.ProviderRegistry - Provider mistral/medium-3.5 succeeded
-2026-08-02 13:20:34.101 [INFO ] c.w.a.WeaverAgent - ReAct Step 5/15 [provider=mistral/medium-3.5]
-2026-08-02 13:20:34.101 [DEBUG] c.w.a.WeaverAgent -   Messages in context: 7 (types: [SystemMessage, SystemMessage, UserMessage, AiMessage, ToolExecutionResultMessage, AiMessage, ToolExecutionResultMessage])
-2026-08-02 13:20:34.101 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Estimated tokens: 2461, Budget: 126976, Threshold (60%): 76185
-2026-08-02 13:20:34.101 [INFO ] c.w.a.ContextBudgetManager -   [ContextBudget] Within budget. No curation needed.
-2026-08-02 13:20:35.037 [INFO ] c.w.a.WeaverAgent - Task COMPLETE. Final response (113 chars): Done. Created `index.html` with a login page that transitions to the message "Come later aligator" on submission.
-2026-08-02 13:20:35.038 [DEBUG] c.w.p.ProviderRegistry - Provider mistral/medium-3.5 succeeded
-2026-08-02 13:20:35.038 [INFO ] c.w.agent.LocalBrain -   [Gate] validateOutput: tool=response, minicpmAvailable=true
-2026-08-02 13:20:35.038 [INFO ] c.w.agent.LocalBrain -   [LocalBrain] Calling MiniCPM5 via Ollama API...
-2026-08-02 13:20:35.038 [DEBUG] c.w.agent.LocalBrain -   [LocalBrain] Prompt: Did this tool execution succeed for the task? Answer ONLY 'YES' or 'NO'.
-Task: read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and build the l...
-2026-08-02 13:20:35.043 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 5ms
-2026-08-02 13:20:35.043 [INFO ] c.w.agent.LocalBrain -   [Gate] → PASS (MiniCPM5 returned null)
-2026-08-02 13:20:35.046 [INFO ] c.w.s.ExperienceLibraryService - Stored solution in experience library
-2026-08-02 13:20:35.049 [INFO ] c.w.a.SelfImprovementSystem -   [SelfImprovement] Recording success: category=SIMPLE_CODE, prompt='read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and ...'
-2026-08-02 13:20:35.310 [INFO ] c.w.cli.WeaverCli - TASK COMPLETED in 9251ms. Response length: 113 chars
-2026-08-02 13:20:35.310 [INFO ] c.w.cli.WeaverCli - TASK HANDLER RETURNED. Ready for next input.
+2026-08-02 13:34:17.511 [WARN ] c.w.agent.LocalBrain -   [LocalBrain] MiniCPM5 returned null after 7ms
+2026-08-02 13:34:17.511 [INFO ] c.w.agent.LocalBrain -   [Gate] → PASS (MiniCPM5 returned null)
+2026-08-02 13:34:17.518 [INFO ] c.w.s.ExperienceLibraryService - Stored solution in experience library
+2026-08-02 13:34:17.518 [INFO ] c.w.a.SelfImprovementSystem -   [SelfImprovement] Recording success: category=SIMPLE_CODE, prompt='read /home/bob/Documents/WORKSPACE/testSite/tasklist.md and ...'
+2026-08-02 13:34:17.746 [INFO ] c.w.cli.WeaverCli - TASK COMPLETED in 95859ms. Response length: 101 chars
+2026-08-02 13:34:17.748 [INFO ] c.w.cli.WeaverCli - TASK HANDLER RETURNED. Ready for next input.

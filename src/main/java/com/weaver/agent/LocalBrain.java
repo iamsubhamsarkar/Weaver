@@ -38,8 +38,9 @@ public class LocalBrain {
     private final EmbeddingModel embeddingModel;
     private boolean minicpmAvailable = false;
 
-    // Model name for Ollama — MiniCPM5-1B with Q8 quantization
-    private static final String LOCAL_MODEL = "minicpm5:1b-q8_0";
+    // Model name for Ollama — Qwen2 1.5B Instruct (best instruction-following at small size)
+    // Alternative: llama3.2:1b or qwen2:0.5b-instruct for even smaller footprint
+    private static final String LOCAL_MODEL = "qwen2:1.5b-instruct";
 
     // Pre-computed embeddings for task classification (multiple prototypes per category)
     private List<Embedding> codeGenEmbeddings;
@@ -302,18 +303,24 @@ public class LocalBrain {
 
             if (response.statusCode() == 200) {
                 String body = response.body();
-                // Check for minicpm5 model (any variant)
-                if (body.contains("minicpm")) {
+                // Check for our preferred model (qwen2 1.5b)
+                if (body.contains("qwen2")) {
                     minicpmAvailable = true;
-                    log.info("✓ Local brain available (Ollama API + MiniCPM5-1B Q8)");
+                    log.info("✓ Local brain available (Ollama API + Qwen2 1.5B)");
+                    preWarmOllama();
+                } else if (body.contains("llama3.2") || body.contains("llama3:")) {
+                    // Fallback: Llama 3.2 1B works too
+                    minicpmAvailable = true;
+                    log.info("✓ Local brain available (Ollama API + Llama). Recommended: ollama pull qwen2:1.5b-instruct");
                     preWarmOllama();
                 } else if (body.contains("gemma")) {
                     // Fallback: old Gemma model still works (just less reliable)
                     minicpmAvailable = true;
-                    log.info("⚠ MiniCPM5 not found, falling back to Gemma. Run: ollama pull minicpm5:1b-q8_0");
+                    log.info("⚠ Using Gemma fallback. Recommended: ollama pull qwen2:1.5b-instruct");
+                    preWarmOllama();
                 } else {
                     minicpmAvailable = false;
-                    log.info("No local model found in Ollama. Run: ollama pull minicpm5:1b-q8_0");
+                    log.info("No local model found in Ollama. Run: ollama pull qwen2:1.5b-instruct");
                 }
             } else {
                 minicpmAvailable = false;

@@ -78,17 +78,46 @@ build_if_needed() {
 
 # ─── Step 3: Start ChromaDB if Docker available ───────────
 start_chromadb() {
-    if command -v docker &> /dev/null; then
-        if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q "weaver-chroma"; then
-            # Only start if docker daemon is running
-            if docker info &> /dev/null; then
-                docker start weaver-chroma 2>/dev/null || \
-                docker run -d --name weaver-chroma --restart unless-stopped \
-                    -p 8000:8000 chromadb/chroma:latest &> /dev/null
-                echo -e "${DIM}  ChromaDB: started (semantic cache active)${RESET}"
+    if ! command -v docker &> /dev/null; then
+        return  # Docker not installed — skip
+    fi
+
+    # Check if Docker daemon is running
+    if ! docker info &> /dev/null 2>&1; then
+        # Try to start Docker daemon (Linux)
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            sudo systemctl start docker 2>/dev/null
+            sleep 2
+            if ! docker info &> /dev/null 2>&1; then
+                return  # Still can't start Docker
             fi
+        else
+            return  # macOS — user needs to start Docker Desktop
         fi
     fi
+
+    # Check if ChromaDB container is running
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "weaver-chroma"; then
+        return  # Already running
+    fi
+
+    # Try to start existing container, or create a new one
+    if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "weaver-chroma"; then
+        docker start weaver-chroma &> /dev/null
+    else
+        docker run -d --name weaver-chroma --restart unless-stopped \
+            -p 8000:8000 chromadb/chroma:latest &> /dev/null
+    fi
+
+    # Wait for ChromaDB to be ready
+    for i in 1 2 3 4 5; do
+        if curl -s --connect-timeout 1 http://localhost:8000/api/v1/heartbeat &> /dev/null; then
+            echo -e "${DIM}  ChromaDB: ready (semantic cache active)${RESET}"
+            return
+        fi
+        sleep 1
+    done
+    echo -e "${DIM}  ChromaDB: starting (may take a moment)${RESET}"
 }
 
 # ─── Step 4: Start Ollama if not running ──────────────────
@@ -110,7 +139,7 @@ start_ollama() {
     # Wait up to 5 seconds for it to become ready
     for i in 1 2 3 4 5; do
         if curl -s --connect-timeout 1 http://localhost:11434/api/tags &> /dev/null; then
-            echo -e "${DIM}  Ollama: ready (MiniCPM5 local brain active)${RESET}"
+            echo -e "${DIM}  Ollama: ready (Qwen2 local brain active)${RESET}"
             return
         fi
         sleep 1

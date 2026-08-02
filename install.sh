@@ -80,7 +80,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
 fi
 
 # ─── Step 0: Clean old residues ───────────────────────────
-echo -e "${CYAN}[0/6] Cleaning old installation...${RESET}"
+echo -e "${CYAN}[0/7] Cleaning old installation...${RESET}"
 
 # Remove old global symlink
 sudo rm -f /usr/local/bin/weaver 2>/dev/null
@@ -105,7 +105,7 @@ fi
 echo -e "  ${GREEN}✓${RESET} Old residues cleared"
 
 # ─── Step 1: Java ─────────────────────────────────────────
-echo -e "${CYAN}[1/6] Checking Java...${RESET}"
+echo -e "${CYAN}[1/7] Checking Java...${RESET}"
 if command -v java &> /dev/null; then
     echo -e "  ${GREEN}✓${RESET} Java found"
 else
@@ -119,7 +119,7 @@ else
 fi
 
 # ─── Step 2: Maven ────────────────────────────────────────
-echo -e "${CYAN}[2/6] Checking Maven...${RESET}"
+echo -e "${CYAN}[2/7] Checking Maven...${RESET}"
 if command -v mvn &> /dev/null; then
     echo -e "  ${GREEN}✓${RESET} Maven found"
 else
@@ -132,8 +132,8 @@ else
     echo -e "  ${GREEN}✓${RESET} Maven installed"
 fi
 
-# ─── Step 3: Ollama + MiniCPM5-1B Q8 (Local Brain) ───────
-echo -e "${CYAN}[3/6] Setting up Local Brain (Ollama + MiniCPM5-1B Q8)...${RESET}"
+# ─── Step 3: Ollama + Qwen2 1.5B (Local Brain) ───────────
+echo -e "${CYAN}[3/7] Setting up Local Brain (Ollama + Qwen2 1.5B)...${RESET}"
 
 if command -v ollama &> /dev/null; then
     echo -e "  ${GREEN}✓${RESET} Ollama found"
@@ -150,26 +150,75 @@ if ! ollama list &> /dev/null 2>&1; then
     sleep 3
 fi
 
-# Pull MiniCPM5 model if not already present (replaces old Gemma 270M)
-if ollama list 2>/dev/null | grep -q "minicpm5"; then
-    echo -e "  ${GREEN}✓${RESET} MiniCPM5 model ready"
+# Pull Qwen2 1.5B model if not already present (local brain for validation/routing)
+if ollama list 2>/dev/null | grep -q "qwen2"; then
+    echo -e "  ${GREEN}✓${RESET} Qwen2 model ready"
 else
-    echo -e "  ${DIM}Pulling MiniCPM5-1B Q8 model (~1.1GB, one-time)...${RESET}"
-    ollama pull minicpm5:1b-q8_0 2>&1 | grep -E "pulling|success|verifying" | while read line; do
+    echo -e "  ${DIM}Pulling Qwen2 1.5B Instruct model (~1.0GB, one-time)...${RESET}"
+    ollama pull qwen2:1.5b-instruct 2>&1 | grep -E "pulling|success|verifying" | while read line; do
         echo -e "       ${DIM}$line${RESET}"
     done
-    echo -e "  ${GREEN}✓${RESET} MiniCPM5 model pulled"
+    echo -e "  ${GREEN}✓${RESET} Qwen2 model pulled"
 fi
 
 # Remove old Gemma model if present (no longer needed)
 if ollama list 2>/dev/null | grep -q "gemma3:270m"; then
-    echo -e "  ${DIM}Removing old Gemma 270M model (replaced by MiniCPM5)...${RESET}"
+    echo -e "  ${DIM}Removing old Gemma 270M model (replaced by Qwen2)...${RESET}"
     ollama rm gemma3:270m 2>/dev/null || true
     echo -e "  ${GREEN}✓${RESET} Old model removed"
 fi
 
-# ─── Step 4: Build Weaver ─────────────────────────────────
-echo -e "${CYAN}[4/6] Building Weaver...${RESET}"
+# ─── Step 4: Docker + ChromaDB (Semantic Cache) ───────────
+echo -e "${CYAN}[4/7] Setting up ChromaDB (Semantic Cache)...${RESET}"
+
+if command -v docker &> /dev/null; then
+    echo -e "  ${GREEN}✓${RESET} Docker found"
+    # Check if Docker daemon is running
+    if docker info &> /dev/null 2>&1; then
+        # Create and start ChromaDB container
+        if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "weaver-chroma"; then
+            # Container exists — start it if stopped
+            docker start weaver-chroma &> /dev/null
+            echo -e "  ${GREEN}✓${RESET} ChromaDB container started"
+        else
+            # Create new container
+            echo -e "  ${DIM}Pulling ChromaDB image (~200MB, one-time)...${RESET}"
+            docker run -d --name weaver-chroma --restart unless-stopped \
+                -p 8000:8000 chromadb/chroma:latest &> /dev/null
+            echo -e "  ${GREEN}✓${RESET} ChromaDB container created and running"
+        fi
+    else
+        echo -e "  ${YELLOW}⚠${RESET} Docker daemon not running. Start Docker and re-run install, or run:"
+        echo -e "     ${DIM}sudo systemctl start docker${RESET}"
+        echo -e "     ${DIM}docker run -d --name weaver-chroma --restart unless-stopped -p 8000:8000 chromadb/chroma:latest${RESET}"
+    fi
+else
+    echo -e "  ${YELLOW}⚠${RESET} Docker not found. Installing..."
+    if $IS_LINUX; then
+        # Install Docker on Linux
+        if command -v apt &> /dev/null; then
+            sudo apt update -qq && sudo apt install -y docker.io 2>&1 | tail -3
+            sudo systemctl start docker 2>/dev/null
+            sudo systemctl enable docker 2>/dev/null
+            # Add current user to docker group (avoids needing sudo)
+            sudo usermod -aG docker "$USER" 2>/dev/null
+            echo -e "  ${GREEN}✓${RESET} Docker installed"
+            # Start ChromaDB
+            sudo docker run -d --name weaver-chroma --restart unless-stopped \
+                -p 8000:8000 chromadb/chroma:latest &> /dev/null
+            echo -e "  ${GREEN}✓${RESET} ChromaDB running on port 8000"
+            echo -e "  ${DIM}  Note: Log out and back in for docker group to take effect${RESET}"
+        else
+            echo -e "  ${RED}✗${RESET} Cannot auto-install Docker. Install manually and re-run."
+        fi
+    elif $IS_MAC; then
+        echo -e "  ${YELLOW}⚠${RESET} Install Docker Desktop from https://docker.com/products/docker-desktop"
+        echo -e "  ${DIM}  ChromaDB is optional — Weaver works without it (no semantic cache)${RESET}"
+    fi
+fi
+
+# ─── Step 5: Build Weaver ─────────────────────────────────
+echo -e "${CYAN}[5/7] Building Weaver...${RESET}"
 cd "$SCRIPT_DIR"
 echo -e "  ${DIM}Downloading dependencies + compiling...${RESET}"
 if mvn package -DskipTests 2>&1 | grep -E "Downloading|BUILD" | tail -10 | while read line; do
@@ -183,8 +232,8 @@ done; then
     fi
 fi
 
-# ─── Step 5: Install global command ───────────────────────
-echo -e "${CYAN}[5/6] Installing 'weaver' command...${RESET}"
+# ─── Step 6: Install global command ───────────────────────
+echo -e "${CYAN}[6/7] Installing 'weaver' command...${RESET}"
 chmod +x "$SCRIPT_DIR/weaver"
 chmod +x "$SCRIPT_DIR/scripts/"*.sh 2>/dev/null || true
 
@@ -195,8 +244,8 @@ else
 fi
 echo -e "  ${GREEN}✓${RESET} 'weaver' available globally"
 
-# ─── Step 6: API Keys ────────────────────────────────────
-echo -e "${CYAN}[6/6] API Key Setup...${RESET}"
+# ─── Step 7: API Keys ────────────────────────────────────
+echo -e "${CYAN}[7/7] API Key Setup...${RESET}"
 CREDENTIALS_FILE="$WEAVER_HOME/credentials.yml"
 
 if [ -f "$CREDENTIALS_FILE" ] && grep "api-key:" "$CREDENTIALS_FILE" 2>/dev/null | grep -qv "YOUR_"; then
@@ -231,7 +280,12 @@ echo ""
 echo -e "${DIM}  Components installed:"
 echo "    • Java 21 (runtime)"
 echo "    • Weaver Agent (JAR)"
-echo "    • Ollama (local AI runtime)"
-echo "    • MiniCPM5-1B Q8 (local brain for validation/routing)"
+echo "    • Ollama + Qwen2 1.5B (local brain for validation/routing)"
+echo "    • Docker + ChromaDB (semantic cache for solved problems)"
 echo -e "    • API keys (~/.weaver/credentials.yml)${RESET}"
+echo ""
+echo -e "  ${DIM}On running 'weaver', the following start automatically:"
+echo "    • Ollama (local model server)"
+echo "    • ChromaDB (semantic cache on port 8000)"
+echo -e "    • Weaver Agent (Spring Boot app)${RESET}"
 echo ""
